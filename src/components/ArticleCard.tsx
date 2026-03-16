@@ -29,7 +29,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
   }
 
   return (
-    <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-2">
         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-50 text-primary-700">
           {article.sourceName}
@@ -39,7 +39,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
         </span>
       </div>
       
-      <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">
+      <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 line-clamp-2">
         {article.url ? (
           <a 
             href={article.url} 
