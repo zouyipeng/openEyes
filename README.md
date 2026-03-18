@@ -13,6 +13,7 @@
   - 文章内容自动总结
   - 每日信息摘要生成
   - 支持 OpenAI 兼容 API（如 MiniMax）
+  - 可配置 maxTokens 参数
 
 - **信息展示**
   - 今日信息汇总页面
@@ -57,7 +58,8 @@ cd backend && npm install && cd ..
   "openai": {
     "apiKey": "your-api-key",
     "baseURL": "https://api.openai.com/v1",
-    "model": "gpt-3.5-turbo"
+    "model": "gpt-3.5-turbo",
+    "maxTokens": 4096
   }
 }
 ```
@@ -69,7 +71,8 @@ cd backend && npm install && cd ..
   "openai": {
     "apiKey": "your-minimax-key",
     "baseURL": "https://api.minimaxi.com/v1",
-    "model": "MiniMax-M2.7"
+    "model": "MiniMax-M2.7",
+    "maxTokens": 4096
   }
 }
 ```
@@ -133,8 +136,8 @@ openEyes/
 │   │       └── storage.ts     # JSON 存储
 │   ├── config.json            # AI 配置
 │   └── sources-config.json    # 信息源配置
-├── public/data/               # 数据文件
-│   └── YYYY-MM-DD.json        # 每日数据
+├── public/                    # 静态资源和数据
+│   └── YYYY-MM-DD.json        # 每日数据文件
 ├── src/                       # 前端
 │   ├── app/
 │   │   ├── page.tsx          # 首页
@@ -148,7 +151,7 @@ openEyes/
 
 ## 📄 数据格式
 
-### 每日数据文件 (YYYY-MM-DD.json)
+### 每日数据文件 (public/YYYY-MM-DD.json)
 
 ```json
 {
@@ -175,6 +178,7 @@ openEyes/
 - [x] 移除 SQLite，改用 JSON 存储
 - [x] 信息源 JSON 配置
 - [x] AI 总结清理优化
+- [x] 数据文件直接保存到 public 目录
 - [ ] 定时任务自动抓取
 - [ ] 文章详情页
 - [ ] 社交媒体源支持
