@@ -7,7 +7,8 @@ let config = {
   openai: {
     apiKey: '',
     baseURL: 'https://api.openai.com/v1',
-    model: 'gpt-3.5-turbo'
+    model: 'gpt-3.5-turbo',
+    maxTokens: 4096
   }
 }
 
@@ -25,6 +26,7 @@ if (fs.existsSync(configPath)) {
     console.log('[AI] API Key:', config.openai.apiKey ? `${config.openai.apiKey.slice(0, 8)}...` : '未配置')
     console.log('[AI] Base URL:', config.openai.baseURL)
     console.log('[AI] Model:', config.openai.model)
+    console.log('[AI] Max Tokens:', config.openai.maxTokens)
   } catch (error) {
     console.error('[AI] 读取配置文件失败:', error)
   }
@@ -45,24 +47,19 @@ function cleanAIResponse(content: string): string {
   
   let cleaned = content
   
-  // 查找 </think 标签的位置
   const thinkEndMatch = cleaned.match(/<\/think>/i)
   
   if (thinkEndMatch) {
-    // 如果找到 </think，提取其后的内容
     const afterThink = cleaned.substring(thinkEndMatch.index! + thinkEndMatch[0].length)
     cleaned = afterThink.trim()
   } else {
-    // 如果没有找到 </think，检查是否有 <think 开头
     const thinkStartMatch = cleaned.match(/<think[^>]*>/i)
     if (thinkStartMatch) {
-      // 如果有 <think 但没有 </think，说明响应不完整，返回空
       console.log('[AI] 发现 <think 标签但没有 </think，响应可能不完整')
       cleaned = ''
     }
   }
   
-  // 移除开头的空白行和多余空格
   cleaned = cleaned.replace(/^\s*\n+/gm, '')
   cleaned = cleaned.trim()
   
@@ -128,18 +125,15 @@ export async function summarizeContent(title: string, content: string): Promise<
             content: `标题：${title}\n\n内容：${truncatedContent}`
           }
         ],
-        max_tokens: 200,
+        max_tokens: config.openai.maxTokens,
         temperature: 0.7,
       })
     }, `总结文章: ${title.substring(0, 30)}...`)
 
     const rawContent = result.choices[0]?.message?.content || ''
     console.log('[AI] 原始响应长度:', rawContent.length)
-    console.log('[AI] 原始响应前100字符:', rawContent.substring(0, 100))
-    console.log('[AI] 原始响应后100字符:', rawContent.substring(Math.max(0, rawContent.length - 100)))
     const cleaned = cleanAIResponse(rawContent)
     console.log('[AI] 清理后长度:', cleaned.length)
-    console.log('[AI] 清理后前100字符:', cleaned.substring(0, 100))
     return cleaned || truncatedContent.substring(0, 100) + '...'
   } catch (error: any) {
     console.error('[AI] summarizeContent - 最终失败:', error.message)
@@ -179,7 +173,7 @@ export async function generateDailySummary(articles: { title: string; content?: 
             content: `今日文章：\n${articlesText}`
           }
         ],
-        max_tokens: 500,
+        max_tokens: config.openai.maxTokens,
         temperature: 0.7,
       })
     }, '生成每日摘要')
@@ -215,7 +209,7 @@ export async function extractKeywords(title: string, content: string): Promise<s
             content: `标题：${title}\n\n内容：${truncatedContent}`
           }
         ],
-        max_tokens: 50,
+        max_tokens: config.openai.maxTokens,
         temperature: 0.5,
       })
     }, `提取关键词: ${title.substring(0, 20)}...`)
@@ -237,6 +231,8 @@ export function isAIConfigured(): boolean {
 export function getAIConfig() {
   return {
     configured: !!config.openai.apiKey,
-    baseURL: config.openai.baseURL
+    baseURL: config.openai.baseURL,
+    model: config.openai.model,
+    maxTokens: config.openai.maxTokens
   }
 }
