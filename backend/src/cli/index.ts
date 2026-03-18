@@ -35,17 +35,14 @@ program
   .action(async () => {
     console.log('开始抓取信息...')
     try {
-      const results = await fetchAllSources()
+      const articles = await fetchAllSources()
       console.log(`抓取完成！`)
-      console.log(`成功: ${results.success} 个信息源`)
-      console.log(`失败: ${results.failed} 个信息源`)
-      console.log(`新增文章: ${results.articles.length} 篇`)
+      console.log(`新增文章: ${articles.length} 篇`)
       
-      // 保存文章数据到JSON文件
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
-      const articles = await prisma.article.findMany({
+      const todayArticles = await prisma.article.findMany({
         where: {
           fetchedAt: {
             gte: today
@@ -53,24 +50,25 @@ program
         }
       })
       
-      // 生成摘要
-      const summary = await generateDailySummary(articles)
+      const summary = await generateDailySummary(todayArticles.map(a => ({
+        title: a.title,
+        content: a.content || undefined,
+        sourceName: a.sourceName
+      })))
       
-      // 保存到前端的data目录
       const dataDir = path.join(__dirname, '../../..', 'public', 'data')
       ensureDirectoryExists(dataDir)
       
       const fileName = getTodayFileName()
+      const dateStr = fileName.replace('.json', '')
       
-      // 保存文章数据
       fs.writeFileSync(
         path.join(dataDir, fileName),
-        JSON.stringify(articles, null, 2),
+        JSON.stringify(todayArticles, null, 2),
         'utf8'
       )
       console.log(`文章数据已保存到: ${path.join(dataDir, fileName)}`)
       
-      // 保存摘要数据
       fs.writeFileSync(
         path.join(dataDir, `summary-${fileName}`),
         JSON.stringify({ summary }, null, 2),
@@ -78,9 +76,7 @@ program
       )
       console.log(`摘要数据已保存到: ${path.join(dataDir, `summary-${fileName}`)}`)
       
-      // 保存信息源数据
       const sources = await prisma.source.findMany()
-      // 解析配置，添加类别信息
       const sourcesWithCategory = sources.map(source => {
         let category = '未分类'
         try {
@@ -103,6 +99,26 @@ program
         'utf8'
       )
       console.log(`信息源数据已保存到: ${path.join(dataDir, `sources-${fileName}`)}`)
+      
+      // 更新 index.json
+      const indexPath = path.join(dataDir, 'index.json')
+      let availableDates: string[] = []
+      
+      if (fs.existsSync(indexPath)) {
+        try {
+          availableDates = JSON.parse(fs.readFileSync(indexPath, 'utf8'))
+        } catch (e) {
+          availableDates = []
+        }
+      }
+      
+      if (!availableDates.includes(dateStr)) {
+        availableDates.unshift(dateStr)
+        availableDates.sort((a, b) => b.localeCompare(a))
+        fs.writeFileSync(indexPath, JSON.stringify(availableDates, null, 2), 'utf8')
+        console.log(`日期索引已更新: ${indexPath}`)
+      }
+      
     } catch (error) {
       console.error('抓取失败:', error)
     }
@@ -130,11 +146,27 @@ program
         }
       })
       
-      const summary = await generateDailySummary(articles)
+      const summary = await generateDailySummary(articles.map(a => ({
+        title: a.title,
+        content: a.content || undefined,
+        sourceName: a.sourceName
+      })))
+      
+      const dataDir = path.join(__dirname, '../../..', 'public', 'data')
+      ensureDirectoryExists(dataDir)
+      
+      const fileName = getTodayFileName()
+      fs.writeFileSync(
+        path.join(dataDir, `summary-${fileName}`),
+        JSON.stringify({ summary, generatedAt: new Date().toISOString() }, null, 2),
+        'utf8'
+      )
+      
       console.log('\n每日摘要:')
       console.log('=' .repeat(50))
       console.log(summary)
       console.log('=' .repeat(50))
+      console.log(`摘要已保存到: ${path.join(dataDir, `summary-${fileName}`)}`)
     } catch (error) {
       console.error('生成摘要失败:', error)
     }

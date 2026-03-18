@@ -1,42 +1,74 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { articleApi, summaryApi, sourceApi } from '@/lib/api'
+import { articleApi, summaryApi, sourceApi, dateApi } from '@/lib/api'
 import ArticleCard from '@/components/ArticleCard'
-import DailySummaryCard from '@/components/DailySummaryCard'
+import ReactMarkdown from 'react-markdown'
+
+const categoryEmoji: Record<string, string> = {
+  'AI': '🤖',
+  '科技': '💻',
+  '开发者': '👨‍💻',
+  '财经': '💰',
+  '新闻': '📰',
+  '国际': '🌍',
+  '未分类': '📄'
+}
 
 export default function HomePage() {
   const [articles, setArticles] = useState<any[]>([])
   const [sources, setSources] = useState<any[]>([])
-  const [sourcesByCategory, setSourcesByCategory] = useState<Record<string, any[]>>({})
   const [summary, setSummary] = useState('')
-  const [categorySummaries, setCategorySummaries] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [availableDates, setAvailableDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>('')
 
   useEffect(() => {
-    loadData()
+    initDates()
   }, [])
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (selectedDate) {
+      loadData(selectedDate)
+    }
+  }, [selectedDate])
+
+  const initDates = async () => {
+    const today = getTodayString()
+    let dates = await dateApi.getAvailableDates()
+    
+    if (dates.length === 0) {
+      dates = [today]
+    }
+    
+    if (!dates.includes(today)) {
+      dates.unshift(today)
+    }
+    
+    setAvailableDates(dates)
+    setSelectedDate(today)
+  }
+
+  const getTodayString = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const loadData = async (dateStr: string) => {
     setLoading(true)
     try {
-      // 并行获取数据
-      const [articlesData, sourcesData, sourcesByCategoryData, summaryData] = await Promise.all([
-        articleApi.getTodayArticles(),
-        sourceApi.getSources(),
-        sourceApi.getSourcesByCategory(),
-        summaryApi.getDailySummary()
+      const [articlesData, sourcesData, summaryData] = await Promise.all([
+        articleApi.getArticlesByDate(dateStr),
+        sourceApi.getSourcesByDate(dateStr),
+        summaryApi.getSummaryByDate(dateStr)
       ])
       
-      const activeSources = sourcesData.filter(source => source.active)
-      
       setArticles(articlesData)
-      setSources(activeSources)
-      setSourcesByCategory(sourcesByCategoryData)
+      setSources(sourcesData)
       setSummary(summaryData.summary)
-      
-      // 生成类别摘要
-      generateCategorySummaries(articlesData, activeSources)
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {
@@ -44,67 +76,29 @@ export default function HomePage() {
     }
   }
 
-  const generateCategorySummaries = (articlesData: any[], sourcesData: any[]) => {
-    // 按类别分组文章
-    const articlesByCategory: Record<string, any[]> = {}
+  const formatDateDisplay = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const today = getTodayString()
     
-    articlesData.forEach(article => {
-      // 查找文章对应的信息源，获取类别
-      const source = sourcesData.find(s => s.id === article.sourceId)
-      const category = source?.category || '未分类'
-      
-      if (!articlesByCategory[category]) {
-        articlesByCategory[category] = []
-      }
-      articlesByCategory[category].push(article)
-    })
-    
-    // 为每个类别生成摘要（这里使用简单的摘要生成，实际项目中可以调用后端 API）
-    const summaries: Record<string, string> = {}
-    Object.entries(articlesByCategory).forEach(([category, categoryArticles]) => {
-      if (categoryArticles.length > 0) {
-        const titles = categoryArticles.map((article: any) => article.title).join('、')
-        summaries[category] = `${category}类别今日有${categoryArticles.length}篇文章，主要内容包括：${titles.substring(0, 100)}...`
-      }
-    })
-    
-    setCategorySummaries(summaries)
-  }
-
-  const handleFetch = async () => {
-    try {
-      const response = await fetch('/api/fetch', { method: 'POST' })
-      const data = await response.json()
-      if (data.success) {
-        alert(data.message)
-        // 重新加载数据
-        await loadData()
-      } else {
-        alert('抓取失败')
-      }
-    } catch (error) {
-      console.error('抓取失败:', error)
-      alert('抓取失败')
+    if (dateStr === today) {
+      return `今天 (${month}月${day}日 ${weekdays[date.getDay()]})`
     }
+    return `${month}月${day}日 ${weekdays[date.getDay()]}`
   }
 
-  // 按类别和信息源分组文章
   const getGroupedArticles = () => {
-    const grouped: Record<string, Record<string, any[]>> = {}
+    const grouped: Record<string, any[]> = {}
     
     articles.forEach(article => {
-      // 查找文章对应的信息源，获取类别
       const source = sources.find(s => s.id === article.sourceId)
       const category = source?.category || '未分类'
-      const sourceName = article.sourceName
       
       if (!grouped[category]) {
-        grouped[category] = {}
+        grouped[category] = []
       }
-      if (!grouped[category][sourceName]) {
-        grouped[category][sourceName] = []
-      }
-      grouped[category][sourceName].push(article)
+      grouped[category].push(article)
     })
     
     return grouped
@@ -114,72 +108,117 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p>加载中...</p>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-gray-400">加载中...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      {/* 页面标题 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">今日信息</h1>
-          <p className="text-gray-500 mt-1">
-            {new Date().toLocaleDateString('zh-CN', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              weekday: 'long'
-            })}
-          </p>
+    <div className="min-h-screen bg-gray-900">
+      <div className="max-w-3xl mx-auto px-4 py-6">
+        {/* 头部 */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold text-gray-100">📰 今日信息</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">
+                共 {articles.length} 篇
+              </span>
+            </div>
+          </div>
+          
+          {/* 日期选择 */}
+          <div className="relative">
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-200 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {availableDates.map(date => (
+                <option key={date} value={date}>
+                  {formatDateDisplay(date)}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">
-            共 {articles.length} 篇文章
-          </span>
-        </div>
-      </div>
 
-      {/* 每日摘要 */}
-      <DailySummaryCard summary={summary} />
-
-      {/* 文章列表 */}
-      {Object.keys(groupedArticles).length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📭</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">今日暂无新内容</h3>
-          <p className="text-gray-500 mb-4">请手动触发抓取</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(groupedArticles).map(([category, sourcesInCategory]) => (
-            <div key={category}>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center mb-4">
-                <span className="w-3 h-3 bg-primary-500 rounded-full mr-3"></span>
-                {category}
-              </h2>
-              
-              <div className="space-y-4">
-                {Object.entries(sourcesInCategory).map(([sourceName, sourceArticles]) => (
-                  <div key={sourceName}>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center mb-3">
-                      <span className="w-2 h-2 bg-primary-400 rounded-full mr-2"></span>
-                      {sourceName}
-                    </h3>
-                    <div className="space-y-3">
-                      {sourceArticles.map((article: any) => (
-                        <ArticleCard key={article.id} article={article} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+        {/* 每日摘要 */}
+        {summary && (
+          <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">💡</span>
+              <div className="flex-1 prose prose-invert prose-sm max-w-none">
+                <ReactMarkdown
+                  components={{
+                    h2: ({ children }) => (
+                      <h2 className="text-base font-semibold text-gray-200 mt-0 mb-2">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm font-semibold text-gray-300 mt-3 mb-1">{children}</h3>
+                    ),
+                    p: ({ children }) => (
+                      <p className="text-sm text-gray-400 my-1 leading-relaxed">{children}</p>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="text-sm text-gray-400 my-1 pl-4 list-disc">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="text-sm text-gray-400 my-1 pl-4 list-decimal">{children}</ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="text-sm text-gray-400 my-0.5">{children}</li>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="text-gray-300 font-medium">{children}</strong>
+                    ),
+                    hr: () => (
+                      <hr className="border-gray-700 my-3" />
+                    ),
+                  }}
+                >
+                  {summary}
+                </ReactMarkdown>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* 文章列表 */}
+        {Object.keys(groupedArticles).length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-4">📭</div>
+            <h3 className="text-base font-medium text-gray-300 mb-2">暂无内容</h3>
+            <p className="text-sm text-gray-500">该日期还没有抓取信息</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(groupedArticles).map(([category, categoryArticles]) => (
+              <div key={category}>
+                <h2 className="text-base font-semibold text-gray-300 flex items-center gap-2 mb-3">
+                  <span>{categoryEmoji[category] || '📄'}</span>
+                  <span>{category}</span>
+                  <span className="text-xs text-gray-500 font-normal">({categoryArticles.length})</span>
+                </h2>
+                <div className="space-y-3">
+                  {categoryArticles.map((article: any) => (
+                    <ArticleCard key={article.id} article={article} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

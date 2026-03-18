@@ -1,6 +1,7 @@
 {
   "openai": {
-    "apiKey": "your-api-key-here",
-    "baseURL": "https://api.openai.com/v1"
+    "apiKey": "YOU-API-KEY",
+    "baseURL": "https://api.minimaxi.com/v1",
+    "model": "MiniMax-M2.7"
   }
 }

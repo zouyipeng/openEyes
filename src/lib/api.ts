@@ -1,13 +1,15 @@
 // 从JSON文件读取数据的API客户端
 
-// 生成今日日期的文件名（格式：YYYY-MM-DD.json）
-const getTodayFileName = () => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
+// 生成指定日期的文件名（格式：YYYY-MM-DD.json）
+const getFileName = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}.json`
 }
+
+// 生成今日日期的文件名
+const getTodayFileName = () => getFileName(new Date())
 
 // 模拟数据，用于测试
 const mockArticles = [
@@ -74,25 +76,56 @@ const mockSources = [
   },
 ]
 
+// 获取可用日期列表
+export const dateApi = {
+  getAvailableDates: async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/data/index.json')
+      if (response.ok) {
+        return await response.json()
+      }
+      return []
+    } catch (error) {
+      console.error('获取日期列表失败:', error)
+      return []
+    }
+  },
+  
+  saveAvailableDates: async (dates: string[]) => {
+    // 这个函数在后端执行，前端只读取
+  }
+}
+
 // 文章相关 API
 export const articleApi = {
+  // 获取指定日期的文章
+  getArticlesByDate: async (dateStr: string): Promise<any[]> => {
+    try {
+      const response = await fetch(`/data/${dateStr}.json`)
+      if (response.ok) {
+        return await response.json()
+      }
+      return []
+    } catch (error) {
+      console.error('读取JSON文件失败:', error)
+      return []
+    }
+  },
+  
   // 获取今日文章
   getTodayArticles: async (): Promise<any[]> => {
     try {
-      // 尝试从JSON文件读取数据
       const fileName = getTodayFileName()
       const response = await fetch(`/data/${fileName}`)
       
       if (response.ok) {
         return await response.json()
       } else {
-        // 如果文件不存在，返回模拟数据
         console.warn('JSON文件不存在，返回模拟数据')
         return mockArticles
       }
     } catch (error) {
       console.error('读取JSON文件失败:', error)
-      // 出错时返回模拟数据
       return mockArticles
     }
   },
@@ -100,13 +133,11 @@ export const articleApi = {
   // 获取所有文章
   getArticles: async (page = 1, limit = 20, sourceId?: string) => {
     try {
-      // 尝试从JSON文件读取数据
       const fileName = getTodayFileName()
       const response = await fetch(`/data/${fileName}`)
       
       if (response.ok) {
         const articles = await response.json()
-        // 过滤和分页
         const filteredArticles = sourceId ? articles.filter((article: any) => article.sourceId === sourceId) : articles
         const start = (page - 1) * limit
         const end = start + limit
@@ -120,7 +151,6 @@ export const articleApi = {
           },
         }
       } else {
-        // 如果文件不存在，返回模拟数据
         console.warn('JSON文件不存在，返回模拟数据')
         return {
           articles: mockArticles.slice(0, limit),
@@ -133,7 +163,6 @@ export const articleApi = {
       }
     } catch (error) {
       console.error('读取JSON文件失败:', error)
-      // 出错时返回模拟数据
       return {
         articles: mockArticles.slice(0, limit),
         pagination: {
@@ -148,7 +177,6 @@ export const articleApi = {
   // 获取文章详情
   getArticleById: async (id: string) => {
     try {
-      // 尝试从JSON文件读取数据
       const fileName = getTodayFileName()
       const response = await fetch(`/data/${fileName}`)
       
@@ -161,7 +189,6 @@ export const articleApi = {
           throw new Error('文章不存在')
         }
       } else {
-        // 如果文件不存在，返回模拟数据
         console.warn('JSON文件不存在，返回模拟数据')
         const article = mockArticles.find((article) => article.id === id)
         if (article) {
@@ -172,7 +199,6 @@ export const articleApi = {
       }
     } catch (error) {
       console.error('读取JSON文件失败:', error)
-      // 出错时返回模拟数据
       const article = mockArticles.find((article) => article.id === id)
       if (article) {
         return article
@@ -184,7 +210,6 @@ export const articleApi = {
   
   // 更新文章状态
   updateArticle: async (id: string, data: { isRead?: boolean; isFavorite?: boolean }) => {
-    // 由于我们从JSON文件读取数据，这里只返回更新后的数据，不实际修改文件
     try {
       const article = await articleApi.getArticleById(id)
       return {
@@ -200,23 +225,34 @@ export const articleApi = {
 
 // 信息源相关 API
 export const sourceApi = {
+  // 获取指定日期的信息源
+  getSourcesByDate: async (dateStr: string): Promise<any[]> => {
+    try {
+      const response = await fetch(`/data/sources-${dateStr}.json`)
+      if (response.ok) {
+        return await response.json()
+      }
+      return []
+    } catch (error) {
+      console.error('读取信息源文件失败:', error)
+      return []
+    }
+  },
+  
   // 获取所有信息源
   getSources: async (): Promise<any[]> => {
     try {
-      // 尝试从JSON文件读取数据
       const fileName = getTodayFileName()
       const response = await fetch(`/data/sources-${fileName}`)
       
       if (response.ok) {
         return await response.json()
       } else {
-        // 如果文件不存在，返回模拟数据
         console.warn('JSON文件不存在，返回模拟数据')
         return mockSources
       }
     } catch (error) {
       console.error('读取JSON文件失败:', error)
-      // 出错时返回模拟数据
       return mockSources
     }
   },
@@ -225,7 +261,6 @@ export const sourceApi = {
   getSourcesByCategory: async (): Promise<Record<string, any[]>> => {
     try {
       const sources = await sourceApi.getSources()
-      // 按类别分组
       const categories: Record<string, any[]> = {}
       
       sources.forEach((source: any) => {
@@ -239,7 +274,6 @@ export const sourceApi = {
       return categories
     } catch (error) {
       console.error('获取信息源分类失败:', error)
-      // 出错时返回模拟数据
       return {
         AI: mockSources.filter((source) => source.category === 'AI'),
         新闻: mockSources.filter((source) => source.category === '新闻'),
@@ -249,7 +283,6 @@ export const sourceApi = {
   
   // 添加信息源
   addSource: async (data: { name: string; type: string; url: string; config?: any; active?: boolean }) => {
-    // 由于我们从JSON文件读取数据，这里只返回添加的数据，不实际修改文件
     return {
       id: Date.now().toString(),
       ...data,
@@ -264,7 +297,6 @@ export const sourceApi = {
   
   // 更新信息源
   updateSource: async (id: string, data: { name?: string; type?: string; url?: string; config?: any; active?: boolean }) => {
-    // 由于我们从JSON文件读取数据，这里只返回更新后的数据，不实际修改文件
     try {
       const sources = await sourceApi.getSources()
       const source = sources.find((source: any) => source.id === id)
@@ -287,30 +319,40 @@ export const sourceApi = {
   
   // 删除信息源
   deleteSource: async (id: string) => {
-    // 由于我们从JSON文件读取数据，这里只返回成功消息，不实际修改文件
     return { message: '信息源删除成功' }
   },
 }
 
 // 摘要相关 API
 export const summaryApi = {
+  // 获取指定日期的摘要
+  getSummaryByDate: async (dateStr: string): Promise<{ summary: string }> => {
+    try {
+      const response = await fetch(`/data/summary-${dateStr}.json`)
+      if (response.ok) {
+        return await response.json()
+      }
+      return { summary: '暂无摘要' }
+    } catch (error) {
+      console.error('读取摘要文件失败:', error)
+      return { summary: '暂无摘要' }
+    }
+  },
+  
   // 获取每日摘要
   getDailySummary: async (): Promise<{ summary: string }> => {
     try {
-      // 尝试从JSON文件读取数据
       const fileName = getTodayFileName()
       const response = await fetch(`/data/summary-${fileName}`)
       
       if (response.ok) {
         return await response.json()
       } else {
-        // 如果文件不存在，返回默认摘要
         console.warn('JSON文件不存在，返回默认摘要')
         return { summary: '今日共收集到2篇文章，来自2个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。' }
       }
     } catch (error) {
       console.error('读取JSON文件失败:', error)
-      // 出错时返回默认摘要
       return { summary: '今日共收集到2篇文章，来自2个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。' }
     }
   },
@@ -320,8 +362,6 @@ export const summaryApi = {
 export const fetchApiClient = {
   // 触发抓取
   triggerFetch: async () => {
-    // 注意：这里我们使用后端的 CLI 工具来执行抓取，前端只需要通知用户
-    // 实际的抓取操作应该在后端通过 CLI 或定时任务执行
     return { success: true, message: '抓取任务已触发，请在后端查看执行结果' }
   },
 }

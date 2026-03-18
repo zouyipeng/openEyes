@@ -42,3 +42,6 @@ prisma/dev.db
 .vscode/
 *.swp
 *.swo
+
+# config with secrets
+backend/config.json

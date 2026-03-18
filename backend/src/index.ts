@@ -243,7 +243,11 @@ app.get('/api/summary', async (req, res) => {
       }
     })
     
-    const summary = await generateDailySummary(articles)
+    const summary = await generateDailySummary(articles.map(a => ({
+      title: a.title,
+      content: a.content || undefined,
+      sourceName: a.sourceName
+    })))
     res.json({ summary })
   } catch (error) {
     console.error('获取每日摘要失败:', error)

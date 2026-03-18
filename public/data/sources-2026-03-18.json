@@ -1,0 +1,98 @@
+[
+  {
+    "id": "cmmw1zefk0000duewdq6mecps",
+    "name": "36氪 AI",
+    "type": "rss",
+    "url": "https://36kr.com/feed",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:04:48.854Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.416Z",
+    "updatedAt": "2026-03-18T13:04:48.854Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zeh40001duewdogilqed",
+    "name": "量子位",
+    "type": "rss",
+    "url": "https://www.qbitai.com/feed",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:04:55.232Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.472Z",
+    "updatedAt": "2026-03-18T13:04:55.233Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zehs0002duewifzffex4",
+    "name": "InfoQ AI",
+    "type": "rss",
+    "url": "https://www.infoq.cn/feed",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:04:59.033Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.497Z",
+    "updatedAt": "2026-03-18T13:04:59.033Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zeie0003duew5knmnw59",
+    "name": "少数派",
+    "type": "rss",
+    "url": "https://sspai.com/feed",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:05:04.543Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.518Z",
+    "updatedAt": "2026-03-18T13:05:04.544Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zeiy0004duewxqpqa5l0",
+    "name": "IT之家",
+    "type": "rss",
+    "url": "https://www.ithome.com/rss/",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:05:10.576Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.538Z",
+    "updatedAt": "2026-03-18T13:05:10.577Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zejg0005duews0r6k7qg",
+    "name": "掘金",
+    "type": "rss",
+    "url": "https://juejin.cn/rss",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:05:17.159Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.556Z",
+    "updatedAt": "2026-03-18T13:05:17.160Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zejy0006duewo1v1t7ys",
+    "name": "开源中国",
+    "type": "rss",
+    "url": "https://www.oschina.net/news/rss",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:05:21.517Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.574Z",
+    "updatedAt": "2026-03-18T13:05:21.518Z",
+    "category": "AI"
+  },
+  {
+    "id": "cmmw1zekg0007duewrocywerf",
+    "name": "虎嗅",
+    "type": "rss",
+    "url": "https://www.huxiu.com/rss/0.xml",
+    "config": "{\"category\":\"AI\"}",
+    "lastFetched": "2026-03-18T13:05:31.380Z",
+    "active": true,
+    "createdAt": "2026-03-18T13:04:30.593Z",
+    "updatedAt": "2026-03-18T13:05:31.381Z",
+    "category": "AI"
+  }
+]
