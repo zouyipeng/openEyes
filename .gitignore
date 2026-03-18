@@ -45,3 +45,6 @@ prisma/dev.db
 
 # config with secrets
 backend/config.json
+
+# Trae
+.trae/
