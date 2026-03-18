@@ -40,7 +40,7 @@ export interface DayData {
 export const dayDataApi = {
   getDayData: async (dateStr: string): Promise<DayData | null> => {
     try {
-      const response = await fetch(`/data/${dateStr}.json`)
+      const response = await fetch(`/${dateStr}.json`)
       if (response.ok) {
         return await response.json()
       }

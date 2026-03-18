@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 
-const DATA_DIR = path.join(__dirname, '..', '..', '..', 'public', 'data')
+const DATA_DIR = path.join(__dirname, '..', '..', '..', 'public')
 const SOURCES_CONFIG_PATH = path.join(__dirname, '..', '..', 'sources-config.json')
 
 export interface Source {
@@ -34,12 +34,6 @@ export interface DayData {
   summary: string
   articles: Article[]
   sources: Source[]
-}
-
-export interface CategoryData {
-  category: string
-  date: string
-  articles: Article[]
 }
 
 function ensureDirectoryExists(dirPath: string): void {
@@ -97,42 +91,6 @@ export function saveDayData(data: DayData): void {
   const filePath = path.join(DATA_DIR, `${data.date}.json`)
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
   console.log(`[Storage] 数据已保存: ${filePath}`)
-}
-
-export function saveCategoryData(dateStr: string, category: string, articles: Article[]): void {
-  const categoryDir = path.join(DATA_DIR, 'categories', dateStr)
-  ensureDirectoryExists(categoryDir)
-  
-  const categoryData: CategoryData = {
-    category,
-    date: dateStr,
-    articles
-  }
-  
-  const filePath = path.join(categoryDir, `${category}.json`)
-  fs.writeFileSync(filePath, JSON.stringify(categoryData, null, 2), 'utf8')
-  console.log(`[Storage] 分类数据已保存: ${filePath}`)
-}
-
-export function loadAvailableDates(): string[] {
-  try {
-    const indexPath = path.join(DATA_DIR, 'index.json')
-    if (!fs.existsSync(indexPath)) {
-      return []
-    }
-    const content = fs.readFileSync(indexPath, 'utf8')
-    return JSON.parse(content)
-  } catch (error) {
-    console.error('[Storage] 加载日期索引失败:', error)
-    return []
-  }
-}
-
-export function saveAvailableDates(dates: string[]): void {
-  ensureDirectoryExists(DATA_DIR)
-  const indexPath = path.join(DATA_DIR, 'index.json')
-  fs.writeFileSync(indexPath, JSON.stringify(dates, null, 2), 'utf8')
-  console.log(`[Storage] 日期索引已更新: ${indexPath}`)
 }
 
 export function getTodayString(): string {

@@ -52,7 +52,7 @@ export default function HomePage() {
       const dateStr = `${year}-${month}-${day}`
       
       try {
-        const response = await fetch(`/data/${dateStr}.json`)
+        const response = await fetch(`/${dateStr}.json`)
         if (response.ok) {
           dates.push(dateStr)
         }
