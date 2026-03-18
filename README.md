@@ -7,20 +7,19 @@
 - **多源信息收集**
   - RSS 订阅解析
   - 网页爬虫（自定义 CSS 选择器）
-  - 手动添加文章/链接
-  - 社交媒体源（预留接口）
+  - 信息源 JSON 配置管理
 
 - **AI 智能处理**
   - 文章内容自动总结
-  - 关键信息提取
   - 每日信息摘要生成
+  - 支持 OpenAI 兼容 API（如 MiniMax）
 
 - **信息展示**
   - 今日信息汇总页面
-  - 按信息源分组展示
-  - 文章列表与搜索筛选
+  - 按分类分组展示
+  - Markdown 格式渲染
   - 移动端适配
-  - 已读/收藏状态管理
+  - 暗色主题
 
 ## 🛠️ 技术栈
 
@@ -29,9 +28,9 @@
 | 前端框架 | Next.js 14 (App Router) |
 | 语言 | TypeScript |
 | 样式 | Tailwind CSS |
-| 数据库 | Prisma + SQLite |
+| 数据存储 | JSON 文件 |
 | 信息抓取 | RSS Parser + Cheerio + Axios |
-| AI | OpenAI API |
+| AI | OpenAI API (兼容 MiniMax 等) |
 
 ## 📦 安装
 
@@ -40,126 +39,145 @@
 git clone https://github.com/zouyipeng/openEyes.git
 cd openEyes
 
-# 安装依赖
+# 安装前端依赖
 npm install
 
-# 初始化数据库
-npx prisma generate
-npx prisma db push
-
-# 配置环境变量
-cp .env .env.local
-# 编辑 .env.local 填入你的 OPENAI_API_KEY
+# 安装后端依赖
+cd backend && npm install && cd ..
 ```
 
 ## ⚙️ 配置
 
-在 `.env` 文件中配置以下环境变量：
+### 1. 配置 AI 服务
 
-```env
-# 数据库
-DATABASE_URL="file:./dev.db"
+创建 `backend/config.json`：
 
-# AI 服务
-OPENAI_API_KEY="your-api-key"
-OPENAI_BASE_URL=""  # 可选，用于自定义 API 地址
+```json
+{
+  "openai": {
+    "apiKey": "your-api-key",
+    "baseURL": "https://api.openai.com/v1",
+    "model": "gpt-3.5-turbo"
+  }
+}
+```
 
-# 抓取配置
-CRON_SCHEDULE="0 8 * * *"  # 每天早上 8 点
+支持 OpenAI 兼容的 API（如 MiniMax）：
+
+```json
+{
+  "openai": {
+    "apiKey": "your-minimax-key",
+    "baseURL": "https://api.minimaxi.com/v1",
+    "model": "MiniMax-M2.7"
+  }
+}
+```
+
+### 2. 配置信息源
+
+编辑 `backend/sources-config.json`：
+
+```json
+{
+  "sources": [
+    {
+      "id": "36kr-ai",
+      "name": "36氪",
+      "type": "rss",
+      "url": "https://36kr.com/feed",
+      "category": "AI",
+      "active": true
+    }
+  ]
+}
 ```
 
 ## 🚀 运行
 
+### 开发模式
+
 ```bash
-# 开发模式
+# 终端1：启动前端
 npm run dev
 
-# 生产构建
-npm run build
-npm start
+# 终端2：抓取信息
+cd backend && npx tsx src/cli/index.ts fetch
+```
+
+### 抓取命令
+
+```bash
+cd backend
+
+# 抓取所有信息源
+npx tsx src/cli/index.ts fetch
+
+# 列出所有信息源
+npx tsx src/cli/index.ts list:sources
 ```
 
 访问 http://localhost:3000 查看应用。
-
-## 📖 使用说明
-
-### 添加信息源
-
-1. 访问 `/sources` 页面
-2. 选择信息源类型：
-   - **RSS 订阅**：输入 RSS/Atom 订阅地址
-   - **网页爬虫**：输入网页 URL 和 CSS 选择器
-   - **手动输入**：手动添加文章链接或内容
-3. 点击"添加信息源"
-
-### 抓取内容
-
-- 点击首页的"立即抓取"按钮手动触发
-- 或等待定时任务自动执行
-
-### 管理文章
-
-- 在首页查看今日信息汇总
-- 在 `/articles` 页面查看全部文章
-- 使用搜索和筛选功能过滤文章
 
 ## 📁 项目结构
 
 ```
 openEyes/
-├── src/
-│   ├── app/                 # Next.js App Router
-│   │   ├── page.tsx        # 首页
-│   │   ├── layout.tsx      # 全局布局
-│   │   ├── sources/        # 信息源管理
-│   │   ├── articles/       # 文章列表
-│   │   └── api/            # API 路由
-│   ├── components/         # React 组件
-│   ├── lib/                # 工具库
-│   │   ├── db.ts           # 数据库操作
-│   │   ├── fetcher.ts      # 信息抓取
-│   │   └── ai.ts           # AI 总结
-│   └── types/              # TypeScript 类型
-├── prisma/
-│   └── schema.prisma       # 数据库模型
-└── .env                    # 环境变量
+├── backend/                    # 后端服务
+│   ├── src/
+│   │   ├── cli/               # CLI 命令
+│   │   │   └── index.ts       # 抓取、摘要等命令
+│   │   └── lib/               # 工具库
+│   │       ├── ai.ts          # AI 总结
+│   │       ├── fetcher.ts     # 信息抓取
+│   │       └── storage.ts     # JSON 存储
+│   ├── config.json            # AI 配置
+│   └── sources-config.json    # 信息源配置
+├── public/data/               # 数据文件
+│   └── YYYY-MM-DD.json        # 每日数据
+├── src/                       # 前端
+│   ├── app/
+│   │   ├── page.tsx          # 首页
+│   │   └── layout.tsx        # 布局
+│   ├── components/           # 组件
+│   │   └── ArticleCard.tsx   # 文章卡片
+│   └── lib/
+│       └── api.ts            # 前端 API
+└── README.md
 ```
 
-## 🗄️ 数据模型
+## 📄 数据格式
 
-### Source（信息源）
+### 每日数据文件 (YYYY-MM-DD.json)
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | String | 唯一标识 |
-| name | String | 信息源名称 |
-| type | String | 类型（rss/crawler/manual/social） |
-| url | String | 来源 URL |
-| config | String? | JSON 配置 |
-| active | Boolean | 是否启用 |
-
-### Article（文章）
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | String | 唯一标识 |
-| sourceId | String | 关联信息源 |
-| sourceName | String | 信息源名称 |
-| title | String | 标题 |
-| content | String? | 内容 |
-| summary | String? | AI 总结 |
-| url | String? | 原文链接 |
-| isRead | Boolean | 是否已读 |
-| isFavorite | Boolean | 是否收藏 |
+```json
+{
+  "date": "2026-03-18",
+  "generatedAt": "2026-03-18T15:00:00Z",
+  "summary": "## 每日信息摘要\n...",
+  "articles": [
+    {
+      "id": "article-id",
+      "sourceId": "source-id",
+      "sourceName": "信息源名称",
+      "title": "文章标题",
+      "content": "文章内容",
+      "summary": "AI 摘要",
+      "url": "原文链接"
+    }
+  ],
+  "sources": [...]
+}
+```
 
 ## 📝 开发计划
 
+- [x] 移除 SQLite，改用 JSON 存储
+- [x] 信息源 JSON 配置
+- [x] AI 总结清理优化
 - [ ] 定时任务自动抓取
 - [ ] 文章详情页
 - [ ] 社交媒体源支持
-- [ ] 导出功能（PDF/EPUB）
-- [ ] 离线阅读支持
-- [ ] 多用户支持
 
 ## 📄 License
 

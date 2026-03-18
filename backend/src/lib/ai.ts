@@ -41,21 +41,31 @@ const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
 
 function cleanAIResponse(content: string): string {
+  if (!content) return ''
+  
   let cleaned = content
   
-  // 移除 <think...</think 格式
-  cleaned = cleaned.replace(/<think[\s\S]*?<\/think>/gi, '')
+  // 查找 </think 标签的位置
+  const thinkEndMatch = cleaned.match(/<\/think>/i)
   
-  // 移除 <think 开头到结束的内容
-  cleaned = cleaned.replace(/<think[\s\S]*$/gi, '')
-  
-  // 找到第一个 markdown 标题或列表项的位置
-  const match = cleaned.search(/^(#{1,3}\s|\d+\.\s|###)/m)
-  if (match > 0) {
-    cleaned = cleaned.substring(match)
+  if (thinkEndMatch) {
+    // 如果找到 </think，提取其后的内容
+    const afterThink = cleaned.substring(thinkEndMatch.index! + thinkEndMatch[0].length)
+    cleaned = afterThink.trim()
+  } else {
+    // 如果没有找到 </think，检查是否有 <think 开头
+    const thinkStartMatch = cleaned.match(/<think[^>]*>/i)
+    if (thinkStartMatch) {
+      // 如果有 <think 但没有 </think，说明响应不完整，返回空
+      console.log('[AI] 发现 <think 标签但没有 </think，响应可能不完整')
+      cleaned = ''
+    }
   }
   
+  // 移除开头的空白行和多余空格
+  cleaned = cleaned.replace(/^\s*\n+/gm, '')
   cleaned = cleaned.trim()
+  
   return cleaned
 }
 
@@ -111,7 +121,7 @@ export async function summarizeContent(title: string, content: string): Promise<
         messages: [
           {
             role: 'system',
-            content: '你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。'
+            content: '你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。'
           },
           {
             role: 'user',
@@ -123,8 +133,14 @@ export async function summarizeContent(title: string, content: string): Promise<
       })
     }, `总结文章: ${title.substring(0, 30)}...`)
 
-    const rawContent = result.choices[0]?.message?.content || '无法生成总结'
-    return cleanAIResponse(rawContent)
+    const rawContent = result.choices[0]?.message?.content || ''
+    console.log('[AI] 原始响应长度:', rawContent.length)
+    console.log('[AI] 原始响应前100字符:', rawContent.substring(0, 100))
+    console.log('[AI] 原始响应后100字符:', rawContent.substring(Math.max(0, rawContent.length - 100)))
+    const cleaned = cleanAIResponse(rawContent)
+    console.log('[AI] 清理后长度:', cleaned.length)
+    console.log('[AI] 清理后前100字符:', cleaned.substring(0, 100))
+    return cleaned || truncatedContent.substring(0, 100) + '...'
   } catch (error: any) {
     console.error('[AI] summarizeContent - 最终失败:', error.message)
     return truncatedContent.substring(0, 100) + '...'
@@ -141,7 +157,7 @@ export async function generateDailySummary(articles: { title: string; content?: 
   
   if (!config.openai.apiKey) {
     console.log('[AI] generateDailySummary - API Key 未配置，使用默认摘要')
-    return `今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。`
+    return `## 每日信息摘要\n\n今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。`
   }
 
   try {
@@ -156,7 +172,7 @@ export async function generateDailySummary(articles: { title: string; content?: 
         messages: [
           {
             role: 'system',
-            content: '你是一个信息整合助手。请根据今日收集的文章，生成一份简洁的每日信息摘要，包括：1. 主要话题和趋势 2. 重要信息点 3. 推荐阅读。用中文回复，控制在300字以内。'
+            content: '你是一个信息整合助手。请根据今日收集的文章，生成一份简洁的每日信息摘要。\n\n格式要求：\n## 每日信息摘要\n\n### 主要话题和趋势\n（总结今日热点）\n\n### 重要信息点\n（列出关键信息）\n\n### 推荐阅读\n（推荐值得关注的文章）\n\n用中文回复，控制在300字以内。不要输出思考过程。'
           },
           {
             role: 'user',
@@ -168,11 +184,12 @@ export async function generateDailySummary(articles: { title: string; content?: 
       })
     }, '生成每日摘要')
 
-    const rawContent = result.choices[0]?.message?.content || '无法生成摘要'
-    return cleanAIResponse(rawContent)
+    const rawContent = result.choices[0]?.message?.content || ''
+    const cleaned = cleanAIResponse(rawContent)
+    return cleaned || `## 每日信息摘要\n\n今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。`
   } catch (error: any) {
     console.error('[AI] generateDailySummary - 最终失败:', error.message)
-    return `今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。`
+    return `## 每日信息摘要\n\n今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。内容涵盖科技、财经、商业等多个领域，为您提供全方位的信息资讯。`
   }
 }
 
@@ -191,7 +208,7 @@ export async function extractKeywords(title: string, content: string): Promise<s
         messages: [
           {
             role: 'system',
-            content: '请从以下文章中提取3-5个关键词，只返回关键词，用逗号分隔。'
+            content: '请从以下文章中提取3-5个关键词，只返回关键词，用逗号分隔。不要输出思考过程。'
           },
           {
             role: 'user',

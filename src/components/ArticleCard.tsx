@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown'
+
 interface Article {
   id: string
   sourceId: string
@@ -36,9 +38,29 @@ export default function ArticleCard({ article }: ArticleCardProps) {
           <h3 className="text-base font-medium text-gray-100 mb-2 leading-relaxed">
             {article.title}
           </h3>
-          <p className="text-sm text-gray-400 leading-relaxed mb-3">
-            {displaySummary}
-          </p>
+          <div className="text-sm text-gray-400 leading-relaxed mb-3 prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className="text-sm text-gray-400 my-0 leading-relaxed">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-gray-300 font-medium">{children}</strong>
+                ),
+                ul: ({ children }) => (
+                  <ul className="text-sm text-gray-400 my-1 pl-4 list-disc">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="text-sm text-gray-400 my-1 pl-4 list-decimal">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-sm text-gray-400 my-0.5">{children}</li>
+                ),
+              }}
+            >
+              {displaySummary}
+            </ReactMarkdown>
+          </div>
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-500">📌</span>
             {article.url ? (

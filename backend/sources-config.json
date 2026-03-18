@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "id": "36kr-ai",
+      "name": "36氪",
+      "type": "rss",
+      "url": "https://36kr.com/feed",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "qbitai",
+      "name": "量子位",
+      "type": "rss",
+      "url": "https://www.qbitai.com/feed",
+      "category": "AI",
+      "active": true
+    }
+  ]
+}
