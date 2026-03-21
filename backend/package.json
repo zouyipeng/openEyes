@@ -11,6 +11,7 @@
     "dev:cli": "tsx src/cli/index.ts",
     "dev:api": "tsx src/index.ts",
     "dev:scheduler": "tsx src/scheduler.ts",
+    "generate-summaries": "tsx src/scripts/generate-summaries.ts",
     "start": "node dist/index.js",
     "start:scheduler": "node dist/scheduler.js"
   },

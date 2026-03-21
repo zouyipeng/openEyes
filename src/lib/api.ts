@@ -1,11 +1,3 @@
-const getTodayFileName = () => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 export interface Article {
   id: string
   sourceId: string
@@ -37,7 +29,35 @@ export interface DayData {
   sources: Source[]
 }
 
+export interface CategoryData {
+  category: string
+  date: string
+  generatedAt: string
+  summary: string
+  articles: Article[]
+  sources: Source[]
+}
+
+export interface DatesIndex {
+  dates: string[]
+  lastUpdated: string
+}
+
 export const dayDataApi = {
+  getAvailableDates: async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/dates.json')
+      if (response.ok) {
+        const data: DatesIndex = await response.json()
+        return data.dates || []
+      }
+      return []
+    } catch (error) {
+      console.error('获取日期列表失败:', error)
+      return []
+    }
+  },
+
   getDayData: async (dateStr: string): Promise<DayData | null> => {
     try {
       const response = await fetch(`/${dateStr}.json`)
@@ -49,5 +69,29 @@ export const dayDataApi = {
       console.error('读取每日数据失败:', error)
       return null
     }
+  },
+
+  getCategoryData: async (category: string, dateStr: string): Promise<CategoryData | null> => {
+    try {
+      const response = await fetch(`/${category}-${dateStr}.json`)
+      if (response.ok) {
+        return await response.json()
+      }
+      return null
+    } catch (error) {
+      console.error('读取分类数据失败:', error)
+      return null
+    }
+  },
+
+  getCategoriesFromDayData: (data: DayData): string[] => {
+    const categories = new Set<string>()
+    data.articles.forEach(article => {
+      const source = data.sources.find(s => s.id === article.sourceId)
+      if (source?.category) {
+        categories.add(source.category)
+      }
+    })
+    return Array.from(categories)
   }
 }

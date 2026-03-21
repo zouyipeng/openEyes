@@ -15,6 +15,158 @@
       "url": "https://www.qbitai.com/feed",
       "category": "AI",
       "active": true
+    },
+    {
+      "id": "wechat-xinzhiyuan",
+      "name": "新智元",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3271041950.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-liangziwei",
+      "name": "量子位(微信)",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3236757533.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-jiqizhixin",
+      "name": "机器之心",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3073282833.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aikjpl",
+      "name": "AI科技评论",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3098132220.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aixinbang",
+      "name": "AI新榜",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3077513493.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aiqianxian",
+      "name": "AI前线",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3554086560.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aikjdby",
+      "name": "AI科技大本营",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3884405249.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-wow",
+      "name": "魔兽世界",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_2390039799.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-aizerlas",
+      "name": "艾泽拉斯快讯",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3885101127.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-huaijiufu",
+      "name": "怀旧服",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3097421364.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-wowgonglue",
+      "name": "魔兽世界怀旧服攻略大全",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3569532524.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-wowfuwuzhongxin",
+      "name": "魔兽世界服务中心",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3574220323.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-warcraftlogs",
+      "name": "Warcraftlogs",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3877714219.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-huaijiumoshou",
+      "name": "怀旧魔兽",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3007058758.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-moshougonglue",
+      "name": "魔兽攻略大全",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3914371813.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-kernelgongjiang",
+      "name": "kernel工匠",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3932678245.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-linuxkernelconf",
+      "name": "Linux内核开发者大会",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3093862571.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-linuxkerneltrip",
+      "name": "Linux内核之旅",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3277093514.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+  "id": "wechat-oppokernel",
+      "name": "OPPO内核工匠",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
+      "category": "技术",
+      "active": true
     }
   ]
 }

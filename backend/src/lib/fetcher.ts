@@ -3,13 +3,22 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import { 
   loadSources, 
-  loadArticlesByDate, 
+  loadProcessedUrls,
+  saveProcessedUrls,
   getTodayString,
   generateArticleId,
+  saveDayData,
+  saveAllCategoryData,
   type Source,
-  type Article 
+  type Article,
+  type DayData 
 } from './storage'
-import { summarizeContent } from './ai'
+import { summarizeContent, generateDailySummary } from './ai'
+
+interface FetchOptions {
+  force?: boolean
+  skipRefresh?: boolean
+}
 
 interface SourceConfig {
   selector?: string
@@ -18,9 +27,57 @@ interface SourceConfig {
   contentSelector?: string
 }
 
-export async function fetchRSS(source: Source): Promise<Article[]> {
+const WEWE_RSS_URL = process.env.WEWE_RSS_URL || 'http://localhost:4000'
+
+function extractTextFromHtml(html: string): string {
+  const $ = cheerio.load(html)
+  
+  const richMediaContent = $('#js_content, .rich_media_content, .js_name, #js_name')
+  
+  if (richMediaContent.length > 0) {
+    richMediaContent.find('script, style, noscript').remove()
+    return richMediaContent.text().replace(/\s+/g, ' ').trim()
+  }
+  
+  const articleContent = $('article, .article-content, .post-content, .entry-content')
+  if (articleContent.length > 0) {
+    articleContent.find('script, style, noscript').remove()
+    return articleContent.text().replace(/\s+/g, ' ').trim()
+  }
+  
+  $('script, style, noscript, head, nav, footer, aside').remove()
+  return $('body').text().replace(/\s+/g, ' ').trim()
+}
+
+function cleanContent(content: string): string {
+  return content
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim()
+    .substring(0, 8000)
+}
+
+async function refreshWeWeRSS(): Promise<boolean> {
   try {
-    const rssParser = new RSSParser()
+    console.log('[Fetcher] 正在刷新 WeWe RSS...')
+    const response = await axios.post(`${WEWE_RSS_URL}/api/refresh`, {}, {
+      timeout: 30000
+    })
+    console.log('[Fetcher] WeWe RSS 刷新成功')
+    return true
+  } catch (error: any) {
+    console.warn('[Fetcher] WeWe RSS 刷新失败:', error.message || error)
+    return false
+  }
+}
+
+export async function fetchRSS(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
+  try {
+    const rssParser = new RSSParser({
+      customFields: {
+        item: ['content:encoded', 'encoded']
+      }
+    })
     const feed = await rssParser.parseURL(source.url)
     const articles: Article[] = []
 
@@ -29,22 +86,34 @@ export async function fetchRSS(source: Source): Promise<Article[]> {
       return articles
     }
 
-    const todayStr = getTodayString()
-    const existingArticles = loadArticlesByDate(todayStr)
-    const existingUrls = new Set(existingArticles.map(a => a.url))
-
     const item = feed.items[0]
     const articleUrl = item.link || ''
 
-    if (existingUrls.has(articleUrl)) {
-      console.log(`[Fetcher] ${source.name} - 文章已存在，跳过`)
+    if (!force && processedUrls.has(articleUrl)) {
+      console.log(`[Fetcher] ${source.name} - 文章已处理过，跳过`)
       return articles
     }
 
-    const content = item.contentSnippet || item.content || ''
+    let rawContent = ''
+    const encodedContent = (item as any)['content:encoded'] || (item as any).encoded || ''
+    
+    if (encodedContent) {
+      rawContent = extractTextFromHtml(encodedContent)
+    }
+    
+    if (!rawContent || rawContent.length < 100) {
+      rawContent = item.contentSnippet || item.content || ''
+    }
+    
+    const content = cleanContent(rawContent)
+    
     let summary = ''
     try {
-      summary = await summarizeContent(item.title || '无标题', content)
+      if (content && content.length > 50) {
+        summary = await summarizeContent(item.title || '无标题', content)
+      } else {
+        summary = content.substring(0, 100) + '...'
+      }
     } catch (error) {
       console.error('生成摘要失败:', error)
       summary = content.substring(0, 100) + '...'
@@ -65,7 +134,7 @@ export async function fetchRSS(source: Source): Promise<Article[]> {
     }
 
     articles.push(article)
-    console.log(`[Fetcher] ${source.name} - 获取 1 篇文章`)
+    console.log(`[Fetcher] ${source.name} - 获取 1 篇文章 (内容长度: ${content.length} 字符)`)
 
     return articles
   } catch (error) {
@@ -74,7 +143,7 @@ export async function fetchRSS(source: Source): Promise<Article[]> {
   }
 }
 
-export async function fetchCrawler(source: Source): Promise<Article[]> {
+export async function fetchCrawler(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
   try {
     const config: SourceConfig = source.config ? JSON.parse(source.config as any) : {}
     const response = await axios.get(source.url, {
@@ -84,10 +153,6 @@ export async function fetchCrawler(source: Source): Promise<Article[]> {
     })
     const $ = cheerio.load(response.data)
     const articles: Article[] = []
-
-    const todayStr = getTodayString()
-    const existingArticles = loadArticlesByDate(todayStr)
-    const existingUrls = new Set(existingArticles.map(a => a.url))
 
     const items = $(config.selector || 'article, .post, .item')
 
@@ -105,7 +170,7 @@ export async function fetchCrawler(source: Source): Promise<Article[]> {
 
       const fullUrl = link.startsWith('http') ? link : new URL(link, source.url).href
 
-      if (existingUrls.has(fullUrl)) continue
+      if (!force && processedUrls.has(fullUrl)) continue
 
       let summary = ''
       try {
@@ -137,7 +202,7 @@ export async function fetchCrawler(source: Source): Promise<Article[]> {
   }
 }
 
-export async function fetchAllSources(): Promise<Article[]> {
+export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
   const sources = loadSources().filter(s => s.active)
 
   console.log(`[Fetcher] 开始抓取 ${sources.length} 个信息源`)
@@ -156,10 +221,10 @@ export async function fetchAllSources(): Promise<Article[]> {
 
       switch (source.type) {
         case 'rss':
-          articles = await fetchRSS(source)
+          articles = await fetchRSS(source, processedUrls, force)
           break
         case 'crawler':
-          articles = await fetchCrawler(source)
+          articles = await fetchCrawler(source, processedUrls, force)
           break
         default:
           console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
@@ -186,4 +251,90 @@ export async function fetchAllSources(): Promise<Article[]> {
   }
 
   return results.articles
+}
+
+export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
+  const { force = false, skipRefresh = false } = options
+  const todayStr = getTodayString()
+  const sources = loadSources().filter(s => s.active)
+  
+  console.log(`[Fetcher] 开始抓取并保存数据...`)
+  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}`)
+  
+  if (!skipRefresh) {
+    await refreshWeWeRSS()
+  } else {
+    console.log('[Fetcher] 跳过 WeWe RSS 刷新')
+  }
+  
+  const processedUrls = loadProcessedUrls()
+  console.log(`[Fetcher] 已加载 ${processedUrls.size} 条已处理URL记录`)
+  
+  const articles = await fetchAllSources(processedUrls, force)
+  
+  if (articles.length === 0) {
+    console.log(`[Fetcher] 没有新文章，跳过保存`)
+    return
+  }
+  
+  articles.forEach(article => {
+    if (article.url) {
+      processedUrls.add(article.url)
+    }
+  })
+  saveProcessedUrls(processedUrls)
+  
+  console.log(`[AI] 生成每日摘要...`)
+  const summary = await generateDailySummary(articles.map(a => ({
+    title: a.title,
+    content: a.content,
+    sourceName: a.sourceName
+  })))
+  
+  const dayData: DayData = {
+    date: todayStr,
+    generatedAt: new Date().toISOString(),
+    summary,
+    articles,
+    sources
+  }
+  
+  saveDayData(dayData)
+  
+  const categorySummaries: Record<string, string> = {}
+  const categoryArticles: Record<string, Article[]> = {}
+  
+  articles.forEach(article => {
+    const source = sources.find(s => s.id === article.sourceId)
+    const category = source?.category || '未分类'
+    
+    if (!categoryArticles[category]) {
+      categoryArticles[category] = []
+    }
+    categoryArticles[category].push(article)
+  })
+  
+  for (const category of Object.keys(categoryArticles)) {
+    if (categoryArticles[category].length > 0) {
+      try {
+        const catSummary = await generateDailySummary(
+          categoryArticles[category].map(a => ({
+            title: a.title,
+            content: a.content,
+            sourceName: a.sourceName
+          }))
+        )
+        categorySummaries[category] = catSummary
+      } catch (error) {
+        console.error(`[AI] 生成 ${category} 分类摘要失败:`, error)
+      }
+    }
+  }
+  
+  saveAllCategoryData(articles, sources, todayStr, categorySummaries)
+  
+  console.log(`[Fetcher] 数据保存完成！`)
+  console.log(`[Fetcher] - 日期: ${todayStr}`)
+  console.log(`[Fetcher] - 文章数: ${articles.length}`)
+  console.log(`[Fetcher] - 分类数: ${Object.keys(categoryArticles).length}`)
 }
