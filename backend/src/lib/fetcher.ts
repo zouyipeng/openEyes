@@ -132,15 +132,11 @@ async function refreshWeWeRSS(): Promise<boolean> {
       }
     }
     
-    // 服务已运行，执行刷新
-    console.log('[Fetcher] 正在刷新 WeWe RSS...')
-    const response = await axios.post(`${WEWE_RSS_URL}/api/refresh`, {}, {
-      timeout: 30000
-    })
-    console.log('[Fetcher] WeWe RSS 刷新成功')
+    // WeWe RSS 服务已运行，从日志分析看，它会自动刷新内容，无需外部刷新请求
+    console.log('[Fetcher] WeWe RSS 服务已运行')
     return true
   } catch (error: any) {
-    console.warn('[Fetcher] WeWe RSS 刷新失败:', error.message || error)
+    console.warn('[Fetcher] WeWe RSS 状态检查失败:', error.message || error)
     return false
   }
 }
