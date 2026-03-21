@@ -64,7 +64,19 @@ export default function HomePage() {
         setCategoryData(data)
         setDayData(null)
         
-        if (dayData) {
+        // 如果有分类数据，使用其来源来获取分类列表
+        if (data) {
+          // 从分类数据的来源中提取所有唯一分类
+          const categoriesSet = new Set<string>()
+          data.sources.forEach(source => {
+            if (source.category) {
+              categoriesSet.add(source.category)
+            }
+          })
+          const cats = Array.from(categoriesSet)
+          setCategories(cats)
+        } else if (dayData) {
+          // 回退到使用dayData
           const cats = dayDataApi.getCategoriesFromDayData(dayData)
           setCategories(cats)
         }
@@ -122,6 +134,7 @@ export default function HomePage() {
     return (dayData || categoryData)?.summary || ''
   }
 
+  // 在组件渲染时重新计算这些值
   const groupedArticles = getGroupedArticles()
   const articles = getArticles()
   const summary = getSummary()

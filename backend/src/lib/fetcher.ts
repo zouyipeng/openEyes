@@ -198,7 +198,7 @@ export async function fetchRSS(source: Source, processedUrls: Set<string>, force
       content,
       summary,
       url: articleUrl,
-      author: item.creator || item.author,
+      author: item.creator,
       publishedAt: item.pubDate,
       fetchedAt: new Date().toISOString()
     }
