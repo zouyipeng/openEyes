@@ -1,6 +1,7 @@
 import RSSParser from 'rss-parser'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import { spawn } from 'child_process'
 import { 
   loadSources, 
   loadProcessedUrls,
@@ -14,6 +15,7 @@ import {
   type DayData 
 } from './storage'
 import { summarizeContent, generateDailySummary } from './ai'
+import path from 'path'
 
 interface FetchOptions {
   force?: boolean
@@ -57,8 +59,79 @@ function cleanContent(content: string): string {
     .substring(0, 8000)
 }
 
+async function isWeWeRSSRunning(): Promise<boolean> {
+  try {
+    await axios.get(WEWE_RSS_URL, { timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function startWeWeRSS(): Promise<boolean> {
+  try {
+    console.log('[Fetcher] 正在启动 WeWe RSS 服务...')
+    const composePath = path.join(__dirname, '..', '..', '..', 'docker-compose.wewe-rss.yml')
+    
+    return new Promise((resolve) => {
+      const process = spawn('docker-compose', ['-f', composePath, 'up', '-d'], {
+        stdio: 'inherit'
+      })
+      
+      process.on('close', (code) => {
+        if (code === 0) {
+          console.log('[Fetcher] WeWe RSS 服务启动成功')
+          resolve(true)
+        } else {
+          console.error('[Fetcher] WeWe RSS 服务启动失败，退出码:', code)
+          resolve(false)
+        }
+      })
+      
+      process.on('error', (error) => {
+        console.error('[Fetcher] 启动 WeWe RSS 服务时发生错误:', error)
+        resolve(false)
+      })
+    })
+  } catch (error) {
+    console.error('[Fetcher] 启动 WeWe RSS 服务失败:', error)
+    return false
+  }
+}
+
+async function waitForWeWeRSS(startupTime = 30000): Promise<boolean> {
+  const startTime = Date.now()
+  
+  while (Date.now() - startTime < startupTime) {
+    if (await isWeWeRSSRunning()) {
+      return true
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    console.log('[Fetcher] 等待 WeWe RSS 服务启动...')
+  }
+  
+  return false
+}
+
 async function refreshWeWeRSS(): Promise<boolean> {
   try {
+    // 检查 WeWe RSS 服务是否运行
+    if (!(await isWeWeRSSRunning())) {
+      console.log('[Fetcher] WeWe RSS 服务未运行')
+      
+      // 尝试启动服务
+      if (!(await startWeWeRSS())) {
+        return false
+      }
+      
+      // 等待服务启动
+      if (!(await waitForWeWeRSS())) {
+        console.error('[Fetcher] WeWe RSS 服务启动超时')
+        return false
+      }
+    }
+    
+    // 服务已运行，执行刷新
     console.log('[Fetcher] 正在刷新 WeWe RSS...')
     const response = await axios.post(`${WEWE_RSS_URL}/api/refresh`, {}, {
       timeout: 30000
