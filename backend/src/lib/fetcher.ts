@@ -343,22 +343,38 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
   const processedUrls = loadProcessedUrls()
   console.log(`[Fetcher] 已加载 ${processedUrls.size} 条已处理URL记录`)
   
-  const articles = await fetchAllSources(processedUrls, force)
+  const newArticles = await fetchAllSources(processedUrls, force)
   
-  if (articles.length === 0) {
+  if (newArticles.length === 0) {
     console.log(`[Fetcher] 没有新文章，跳过保存`)
     return
   }
   
-  articles.forEach(article => {
+  // 保存新文章的URL到已处理记录
+  newArticles.forEach(article => {
     if (article.url) {
       processedUrls.add(article.url)
     }
   })
   saveProcessedUrls(processedUrls)
   
+  // 加载已有数据（如果存在）
+  let existingDayData = loadDayData(todayStr)
+  let allArticles = [...newArticles]
+  
+  if (existingDayData && existingDayData.articles.length > 0) {
+    // 合并新旧文章，去重（基于URL）
+    const existingUrls = new Set(existingDayData.articles.map(a => a.url))
+    const uniqueNewArticles = newArticles.filter(a => !existingUrls.has(a.url))
+    
+    allArticles = [...existingDayData.articles, ...uniqueNewArticles]
+    console.log(`[Fetcher] 合并新旧文章: 已有 ${existingDayData.articles.length} 篇，新增 ${uniqueNewArticles.length} 篇，总计 ${allArticles.length} 篇`)
+  } else {
+    console.log(`[Fetcher] 新增 ${newArticles.length} 篇文章`)
+  }
+  
   console.log(`[AI] 生成每日摘要...`)
-  const summary = await generateDailySummary(articles.map(a => ({
+  const summary = await generateDailySummary(allArticles.map(a => ({
     title: a.title,
     content: a.content,
     sourceName: a.sourceName
@@ -368,16 +384,18 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
     date: todayStr,
     generatedAt: new Date().toISOString(),
     summary,
-    articles,
+    articles: allArticles,
     sources
   }
   
   saveDayData(dayData)
   
-  const categorySummaries: Record<string, string> = {}
-  const categoryArticles: Record<string, Article[]> = {}
+  // 分类处理 - 使用所有文章（合并后的）
+  const categorySummaries: Record<string, string> = {};
+  const categoryArticles: Record<string, Article[]> = {};
   
-  articles.forEach(article => {
+  // 将所有文章分类
+  allArticles.forEach(article => {
     const source = sources.find(s => s.id === article.sourceId)
     const category = source?.category || '未分类'
     
@@ -387,6 +405,7 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
     categoryArticles[category].push(article)
   })
   
+  // 为每个分类生成摘要
   for (const category of Object.keys(categoryArticles)) {
     if (categoryArticles[category].length > 0) {
       try {
@@ -404,10 +423,11 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
     }
   }
   
-  saveAllCategoryData(articles, sources, todayStr, categorySummaries)
+  // 保存所有分类数据（使用合并后的所有文章）
+  saveAllCategoryData(allArticles, sources, todayStr, categorySummaries)
   
   console.log(`[Fetcher] 数据保存完成！`)
   console.log(`[Fetcher] - 日期: ${todayStr}`)
-  console.log(`[Fetcher] - 文章数: ${articles.length}`)
+  console.log(`[Fetcher] - 文章数: ${allArticles.length}`)
   console.log(`[Fetcher] - 分类数: ${Object.keys(categoryArticles).length}`)
 }
