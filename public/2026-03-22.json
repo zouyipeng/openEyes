@@ -1,0 +1,189 @@
+{
+  "date": "2026-03-22",
+  "generatedAt": "2026-03-21T16:16:55.736Z",
+  "summary": "## 每日信息摘要\n### 主要话题和趋势\n英伟达在GTC大会上发布的DLSS 5技术引发行业热议。该技术被定位为自2018年实时光线追踪以来图形领域的重大突破，主打AI驱动的画质重建与超分辨率能力，旨在为游戏和图形渲染带来\"照片级真实\"的光照与材质效果。然而，技术发布后引发争议，\"AI画质革命\"还是\"AI整容\"成为讨论焦点。\n### 重要信息点\n- **DLSS 5定位**：英伟达称之为消费级新技术中\"唯一\"亮点\n- **核心技术**：AI图像重建与超分辨率\n- **争议焦点**：画质提升是否依赖AI\"美化\"而非真实渲染进步\n- **高层参与**：黄仁勋亲自下场参与论战，显示该技术的战略重要性\n- **官方展示**：通过一系列对比效果呈现技术能力\n### 推荐阅读\n英伟达DLSS 5全网争议完整梳理（机器之心）——了解AI图形技术的边界与争议边界",
+  "articles": [
+    {
+      "id": "art_1774109761831_mw0ufrgkk",
+      "sourceId": "wechat-jiqizhixin",
+      "sourceName": "机器之心",
+      "sourceUrl": "http://localhost:4000/feeds/MP_WXS_3073282833.rss",
+      "title": "画质革命还是AI整容？DLSS 5引爆全网争议，老黄亲自下场论战",
+      "content": "机器之心 机器之心编辑部今年 GTC 上英伟达「唯一」的消费级新技术，却在推出后引来了巨大争议。本周，英伟达公布了其最新的 AI 图像重建与超分辨率技术 DLSS 5，并称其为「自 2018 年实时光线追踪问世以来，公司在计算机图形领域最重大的突破」。按照英伟达的说法，这项技术能够「为像素注入照片级真实的光照与材质」。与此同时，官方也展示了 DLSS 5 一系列对比效果，用以呈现其在光照、材质和整体画面表现上的提升。看起来都挺不错吧？不过很多玩家仔细研究之后抱怨了起来。虽然现在只展示了一些 demo，但已有不少声音指出，DLSS 5 把原本清晰可辨的人脸，变成了某种类似 AI 生成的劣质内容，艺术家的原本设计正在被破坏。大家甚至贴出了一些搞笑图，DLSS 5 前后对比是这样的：不少网友的失望，最终都汇成一句话：艺术家花费大量时间精心打磨的角色模型，却被 AI 一键替换成一张通用脸，难免令人反感。虽然画质变好了，但是新的 AI 功能就像上了一个直播美颜滤镜，这样的画面你能接受吗？反正人们的评价两极分化挺大的。人们的抱怨源自于英伟达在 DLSS 技术上的推倒重建。生成式 AI 全面接管，游戏大厂押注DLSS 即「深度学习超级采样」，是英伟达 GPU 上的 AI 图像增强技术，它能以较低的分辨率渲染游戏，并实时细化图像以帮助提高性能（帧率）。在 DLSS 5 这一代，英伟达的核心目标是将好莱坞级别的影视特效（VFX）带入实时渲染的游戏中，它支持高达 4K 的分辨率并保持实时交互的流畅性。在技术上，DLSS 5 放弃了更依赖硬件算力的传统路径，全面转向了生成式 AI。其中的重点在于实时神经渲染模型，这是一个经过端到端训练的大型 AI 模型，能够在一帧画面中理解复杂的「场景语义」（Scene Semantics），精准识别哪里是角色、哪里是布料，以及当前是顺光还是逆光环境。3D 的引导生成会接收游戏的颜色和运动矢量（Motion Vectors）作为输入参数，基于这些数据直接在像素层面生成光影和材质。随后，AI 生成的画面紧密锚定在原始 3D 内容上，以确保帧与帧之间的画面连续且不闪烁。之前直到 DLSS 4.5，英伟达的目标还是修复与细化，到了 DLSS 5，目标已经变成了「创造」。DLSS 5 要到今年秋季才会正式推出，目前看起来需要相当强劲的硬件支持。在 GTC 的现场演示中，英伟达使用的是两张 RTX 5090 显卡协同工作 —— 其中一张专门负责游戏的基础渲染，而另一张则完全致力于运行 DLSS 5 的 AI 模型。这项技术正由不少全球知名游戏公司大力推动，包括 Bethesda、育碧、网易、腾讯，而他们似乎都接受了将自己的游戏与这种特定视觉风格绑定在一起。在英伟达官方博客中，多家游戏厂商高层对 DLSS 5 表达了支持。首批支持的游戏包括刺客信条、三角洲、霍格沃茨之遗、上古卷轴四重置版等等。从目前信息来看，一些头部游戏厂商对英伟达这一技术路径表现出一定程度的认可，这一点在行业内也引发了讨论。针对外界的质疑，Bethesda 在后续回应中表示，目前展示的效果仍属于非常早期版本，后续将由美术团队进一步调整光照与最终呈现，以符合各自游戏的风格。虽然效率和效果的优化是肯定会有的，但问题在于， DLSS 5 是一次「无中生有」的重构，它利用生成式 AI 重新加工光照和材质，添加了游戏中原本根本不存在的细节。从当前展示效果来看，这项技术也引发了对未来视觉风格的担忧。随着 AI 持续渗透到内容生产的各个环节，其在审美层面的影响逐渐显现。AI 生成的人脸，本质上是无数图像的拼合与平均，最终输出的是一种被同质化的理想形象。它通常很容易识别，因为有一些明显特征：过于光滑的皮肤、趋同的五官、始终开心的眼神、带着饱满嘴唇的微笑、看起来像合成的一样完美发型、小巧的鼻子，以及类似 HDR 的打光让每一个轮廓都被强化。这些特征单独来看并不奇怪，但当一张张 AI 脸同时具备大部分甚至全部这些元素时，就会滑向恐怖谷。这也正是为什么那么多人对英伟达发布中的人脸表现反应强烈：它们不仅不好看，而且看起来和其他所有东西都一模一样。这种审美已经无处不在，并且正逐渐从社交网络渗透到更传统的娱乐和文化领域。现阶段 AI 生成的短视频层出不穷，往往一眼就能认出来。许多玩家担忧，英伟达的这项新技术，可能会成为这种审美入侵游戏领域的缺口。这种 AI 似乎在「越俎代庖」修改底层美术设计的趋势，正是引发核心圈层反感的原因。在游戏行业，这种 AI 篡改美术作品的现象尤为令人担忧。玩家吐槽，老黄回应了针对外界认为 DLSS 5 会让画面变差的质疑，黄仁勋在回应中表示，这种说法是「完全错误的」。他解释称，DLSS 5 的核心在于将生成式 AI 与游戏中的几何、纹理等真实数据进行融合，并且整个过程是可控的。开发者可以对「生成式 AI 进行微调，使其符合自身的艺术风格」。英伟达提供的是技术，而不是艺术创作本身。在机制上，DLSS 5 并不是传统意义上的后处理技术，也不是在每一帧画面上叠加滤镜，而是在几何层面进行生成式建模。这意味着，其结果是基于游戏本身的真实数据进行约束的，在增强画面表现的同时，不会改变开发者对艺术风格的控制权。他进一步强调，所有与生成相关的能力都掌握在游戏开发者手中，无论是卡通风格、写实渲染，还是其他视觉方向，都可以通过调节实现。这一点与当前许多通用生成式 AI 不同，其核心在于对内容的高度可控。参考链接：https://www.nvidia.com/en-us/geforce/news/dlss5-breakthrough-in-visual-fidelity-for-games/https://www.theverge.com/entertainment/896213/nvidia-dlss-5-ai-faces-motion-smoothinghttps://www.tomshardware.com/pc-components/gpus/jensen-huang-says-gamers-are-completely-wrong-about-dlss-5-nvidia-ceo-responds-to-dlss-5-backlash© THE END 转载请联系本公众号获得授权投稿或寻求报道：liyazhou@jiqizhixin.com",
+      "summary": "英伟达发布DLSS 5技术，声称是图形领域重大突破，但引发巨大争议。许多玩家和艺术家批评AI生成的人脸过于同质化、像\"美颜滤镜\"，破坏了原本精心设计的角色模型。虽然游戏厂商支持该技术，但核心玩家担忧生成式AI会篡改底层美术设计，使游戏画面趋同。DLSS 5预计今年秋季推出。",
+      "url": "https://mp.weixin.qq.com/s/1glKNj-EMygQJOruWw6r6Q",
+      "publishedAt": "Sat, 21 Mar 2026 05:01:03 GMT",
+      "fetchedAt": "2026-03-21T16:16:01.831Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "36kr-ai",
+      "name": "36氪",
+      "type": "rss",
+      "url": "https://36kr.com/feed",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "qbitai",
+      "name": "量子位",
+      "type": "rss",
+      "url": "https://www.qbitai.com/feed",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-xinzhiyuan",
+      "name": "新智元",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3271041950.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-liangziwei",
+      "name": "量子位(微信)",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3236757533.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-jiqizhixin",
+      "name": "机器之心",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3073282833.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aikjpl",
+      "name": "AI科技评论",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3098132220.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aixinbang",
+      "name": "AI新榜",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3077513493.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aiqianxian",
+      "name": "AI前线",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3554086560.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-aikjdby",
+      "name": "AI科技大本营",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3884405249.rss",
+      "category": "AI",
+      "active": true
+    },
+    {
+      "id": "wechat-wow",
+      "name": "魔兽世界",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_2390039799.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-aizerlas",
+      "name": "艾泽拉斯快讯",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3885101127.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-huaijiufu",
+      "name": "怀旧服",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3097421364.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-wowgonglue",
+      "name": "魔兽世界怀旧服攻略大全",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3569532524.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-wowfuwuzhongxin",
+      "name": "魔兽世界服务中心",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3574220323.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-warcraftlogs",
+      "name": "Warcraftlogs",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3877714219.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-huaijiumoshou",
+      "name": "怀旧魔兽",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3007058758.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-moshougonglue",
+      "name": "魔兽攻略大全",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3914371813.rss",
+      "category": "游戏",
+      "active": true
+    },
+    {
+      "id": "wechat-kernelgongjiang",
+      "name": "kernel工匠",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3932678245.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-linuxkernelconf",
+      "name": "Linux内核开发者大会",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3093862571.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-linuxkerneltrip",
+      "name": "Linux内核之旅",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3277093514.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-oppokernel",
+      "name": "OPPO内核工匠",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
+      "category": "技术",
+      "active": true
+    }
+  ]
+}
