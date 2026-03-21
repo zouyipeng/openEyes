@@ -10,6 +10,7 @@ import {
   generateArticleId,
   saveDayData,
   saveAllCategoryData,
+  loadDayData,
   type Source,
   type Article,
   type DayData 
