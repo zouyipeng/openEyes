@@ -109,8 +109,11 @@ cd backend && npm install && cd ..
 ### 开发模式
 
 ```bash
-# 终端1：启动前端
+# 终端1：启动前端 (默认端口 3000)
 npm run dev
+
+# 自定义开发服务器主机和端口
+npm run dev -- -H 0.0.0.0 -p 8080
 
 # 终端2：抓取信息
 cd backend && npx tsx src/cli/index.ts fetch
@@ -122,8 +125,14 @@ cd backend && npx tsx src/cli/index.ts fetch
 # 构建前端项目
 npm run build
 
-# 启动静态文件服务器 (默认端口 3000)
+# 启动静态文件服务器 (默认端口 3000，默认监听所有接口)
 npx serve out
+
+# 自定义部署主机和端口
+npx serve out -l 0.0.0.0:80
+
+# 只监听本地接口
+npx serve out -l 127.0.0.1:3000
 ```
 
 #### 关闭前端服务
