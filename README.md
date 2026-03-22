@@ -116,6 +116,36 @@ npm run dev
 cd backend && npx tsx src/cli/index.ts fetch
 ```
 
+### 生产部署
+
+```bash
+# 构建前端项目
+npm run build
+
+# 启动静态文件服务器 (默认端口 3000)
+npx serve out
+```
+
+#### 关闭前端服务
+
+在 Windows 上：
+```bash
+# 查找占用 3000 端口的进程
+netstat -ano | findstr :3000
+
+# 终止进程 (将 12345 替换为实际的 PID)
+taskkill /PID 12345 /F
+```
+
+在 Linux/macOS 上：
+```bash
+# 查找占用 3000 端口的进程
+lsof -i :3000
+
+# 终止进程 (将 12345 替换为实际的 PID)
+kill -9 12345
+```
+
 ### 抓取命令
 
 ```bash
