@@ -160,6 +160,12 @@ npx tsx src/cli/index.ts fetch --force
 # 抓取时跳过 WeWe RSS 刷新
 npx tsx src/cli/index.ts fetch --skip-refresh
 
+# 只抓取特定分类的信息源
+npx tsx src/cli/index.ts fetch --category 技术
+
+# 组合使用参数（只抓取技术分类，强制刷新）
+npx tsx src/cli/index.ts fetch --category 技术 --force --skip-refresh
+
 # 列出所有信息源
 npx tsx src/cli/index.ts list:sources
 
