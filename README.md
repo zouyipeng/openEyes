@@ -128,11 +128,14 @@ npm run build
 # 启动静态文件服务器 (默认端口 3000，默认监听所有接口)
 npx serve out
 
-# 自定义部署主机和端口
-npx serve out -l 0.0.0.0:80
+# 自定义部署端口
+npx serve out -p 80
+
+# 自定义主机和端口
+npx serve out --listen 0.0.0.0:80
 
 # 只监听本地接口
-npx serve out -l 127.0.0.1:3000
+npx serve out --listen 127.0.0.1:3000
 ```
 
 #### 关闭前端服务
