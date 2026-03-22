@@ -2,7 +2,7 @@
   "date": "2026-03-22",
   "category": "linux kernel",
   "generatedAt": "2026-03-22T07:56:47.384Z",
-  "summary": "Linux内核邮件列表讨论摘要",
+  "summary": "## 每日信息摘要\n### 主要话题和趋势\n今日Linux内核邮件列表讨论集中在**sched_ext调度器扩展**、**LoongArch龙芯架构支持**以及多项驱动修复上。\n### 重要信息点\n- **sched_ext v7.1集成**：新增SCX_ENQ_IMMED和scx_b测试用例，添加compat处理程序，修复cpu_smt_mask()保护问题\n- **Loongson-2K0300支持**：LoongArch架构新增2K0300处理器支持，相关DTS和dt-bindings补丁进入v5版本\n- **安全修复**：tty/vt修复do_con_write中的slab-out-of-bounds写入漏洞；mm/vmscan防止MGLRU回收锁定地址空间\n- **驱动更新**：drm/amd/display去重DDC寄存器；drm/panel-edp新增BOE NV153WUM-N42等面板支持；nvme优化命令设置路径；lan966x添加PCIe FDMA XDP支持\n- **架构相关**：RISC-V添加reloc handlers返回值检查；Renesas MTU3 PWM/counter修复\n### 推荐阅读\n- [Loongson-2K0300处理器支持补丁集](https://lkml.org/lkml/2026/3/22/121) - 龙芯新芯片架构支持进展\n- [tty/vt安全修复](https://lkml.org/lkml/2026/3/22/127) - 重要安全补丁\n- [MGLRU回收优化](https://lkml.org/lkml/2026/3/22/116) - 内存管理改进",
   "articles": [
     {
       "id": "art_1774164966682_0m7jdoot4",
