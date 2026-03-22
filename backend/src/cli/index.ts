@@ -32,13 +32,18 @@ program
   .option('-f, --force', '强制重新抓取（忽略已处理记录）')
   .option('-s, --skip-refresh', '跳过 WeWe RSS 刷新')
   .option('-c, --category <category>', '只抓取指定分类的信息源')
+  .option('-d, --debug', '调试模式：限制每个信息源只抓取少量数据')
   .action(async (options) => {
     console.log('开始抓取信息...')
+    if (options.debug) {
+      console.log('🐛 调试模式已启用，将限制抓取数量')
+    }
     try {
       await fetchAndSave({
         force: options.force || false,
         skipRefresh: options.skipRefresh || false,
-        category: options.category
+        category: options.category,
+        debug: options.debug || false
       })
     } catch (error) {
       console.error('抓取失败:', error)

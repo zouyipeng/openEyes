@@ -11,17 +11,30 @@ import {
   saveDayData,
   saveAllCategoryData,
   loadDayData,
+  loadGlobalConfig,
+  loadSourcesConfig,
   type Source,
   type Article,
-  type DayData 
+  type DayData,
+  type LKMLMessage,
+  type LKMLPatch,
+  type GlobalConfig
 } from './storage'
-import { summarizeContent, generateDailySummary } from './ai'
+import { 
+  summarizeArticlesInCategory, 
+  generateCategorySummary, 
+  analyzePatch, 
+  summarizePatchDiscussion,
+  clearAllCategoryContexts,
+  summarizeContent
+} from './ai'
 import path from 'path'
 
 interface FetchOptions {
   force?: boolean
   skipRefresh?: boolean
   category?: string
+  debug?: boolean
 }
 
 interface SourceConfig {
@@ -177,18 +190,6 @@ export async function fetchRSS(source: Source, processedUrls: Set<string>, force
     }
     
     const content = cleanContent(rawContent)
-    
-    let summary = ''
-    try {
-      if (content && content.length > 50) {
-        summary = await summarizeContent(item.title || '无标题', content)
-      } else {
-        summary = content.substring(0, 100) + '...'
-      }
-    } catch (error) {
-      console.error('生成摘要失败:', error)
-      summary = content.substring(0, 100) + '...'
-    }
 
     const article: Article = {
       id: generateArticleId(),
@@ -197,7 +198,6 @@ export async function fetchRSS(source: Source, processedUrls: Set<string>, force
       sourceUrl: source.url,
       title: item.title || '无标题',
       content,
-      summary,
       url: articleUrl,
       author: item.creator,
       publishedAt: item.pubDate,
@@ -214,14 +214,17 @@ export async function fetchRSS(source: Source, processedUrls: Set<string>, force
   }
 }
 
-export async function fetchLKML(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
+export async function fetchLKML(source: Source, processedUrls: Set<string>, force: boolean = false, debug: boolean = false): Promise<Article[]> {
+  const excludeAuthors = source.excludeAuthors || []
+  const maxPatches = debug ? 2 : 100
+  
   try {
-    // 尝试访问last100 messages页面，而不是today页面
-    const last100Url = new URL('/lkml/last100/', source.url).href
+    const today = new Date()
+    const todayUrl = new URL(`/lkml/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`, source.url).href
     
-    console.log(`[Fetcher] LKML - 正在访问: ${last100Url}`)
+    console.log(`[Fetcher] LKML - 正在访问: ${todayUrl}`)
     
-    const response = await axios.get(last100Url, {
+    const response = await axios.get(todayUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
@@ -230,57 +233,136 @@ export async function fetchLKML(source: Source, processedUrls: Set<string>, forc
     
     console.log(`[Fetcher] LKML - 响应状态: ${response.status}`)
     
-    // 保存页面内容以便分析
-    const fs = require('fs')
-    const pageContentPath = path.join(__dirname, '..', '..', 'lkml-page.html')
-    fs.writeFileSync(pageContentPath, response.data)
-    console.log(`[Fetcher] LKML - 页面内容已保存到: ${pageContentPath}`)
-    
     const $ = cheerio.load(response.data)
-    const articles: Article[] = []
+    const messages: LKMLMessage[] = []
     
-    // 查找所有的消息条目 - 正确的选择器应该是table.mh下的tr.c0和tr.c1
     const messageEntries = $('table.mh tr.c0, table.mh tr.c1')
     
     console.log(`[Fetcher] LKML - 找到 ${messageEntries.length} 条消息`)
     
-    // 从表格行中提取消息
     for (const element of messageEntries.toArray()) {
       const $entry = $(element)
       const $tds = $entry.find('td')
       
-      // 第二条td包含标题链接
       const $titleTd = $tds.eq(1)
       const $link = $titleTd.find('a:first-child')
+      const $authorTd = $tds.eq(2)
+      const $dateTd = $tds.eq(0)
       
       const title = $link.text().trim()
       const link = $link.attr('href')
-      
-      // 只打印前5个条目的信息以便调试
-      if (articles.length < 5) {
-        console.log(`[Fetcher] LKML - 条目: title="${title}", link="${link}"`)
-      }
+      const author = $authorTd.find('a').text().trim() || $authorTd.text().trim()
+      const dateStr = $dateTd.text().trim()
       
       if (!title || !link) continue
       
-      // 只抓取patch相关的讨论
-      if (!title.toLowerCase().includes('patch') && !title.toLowerCase().includes('diff')) {
+      if (title.toLowerCase().startsWith('re:')) {
+        continue
+      }
+      
+      if (excludeAuthors.some(ex => author.toLowerCase().includes(ex.toLowerCase()))) {
+        console.log(`[Fetcher] LKML - 排除作者: ${author}`)
+        continue
+      }
+      
+      if (!title.toLowerCase().includes('patch') && 
+          !title.toLowerCase().includes('diff') &&
+          !title.toLowerCase().includes('git pull') &&
+          !title.toLowerCase().includes('rfc')) {
         continue
       }
       
       const fullUrl = link.startsWith('http') ? link : new URL(link, source.url).href
       
-      if (!force && processedUrls.has(fullUrl)) continue
+      let parsedDate = new Date().toISOString()
       
-      // 从标题和链接中提取内容
-      const content = `Linux内核邮件列表讨论: ${title}\n链接: ${fullUrl}`
+      const urlDateMatch = fullUrl.match(/\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//)
+      if (urlDateMatch) {
+        try {
+          const year = parseInt(urlDateMatch[1])
+          const month = parseInt(urlDateMatch[2]) - 1
+          const day = parseInt(urlDateMatch[3])
+          parsedDate = new Date(year, month, day).toISOString()
+        } catch {
+          console.log(`[Fetcher] LKML - URL日期解析失败: ${fullUrl}`)
+        }
+      } else if (dateStr) {
+        try {
+          const dateMatch = dateStr.match(/(\w{3})\s+(\d{1,2}),\s+(\d{4})/)
+          if (dateMatch) {
+            const monthMap: Record<string, number> = {
+              'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+              'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+            }
+            const month = monthMap[dateMatch[1]] || 0
+            const day = parseInt(dateMatch[2])
+            const year = parseInt(dateMatch[3])
+            parsedDate = new Date(year, month, day).toISOString()
+          } else {
+            const shortDateMatch = dateStr.match(/(\w{3})\s+(\d{1,2})/)
+            if (shortDateMatch) {
+              const monthMap: Record<string, number> = {
+                'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+              }
+              const month = monthMap[shortDateMatch[1]] || 0
+              const day = parseInt(shortDateMatch[2])
+              const year = new Date().getFullYear()
+              parsedDate = new Date(year, month, day).toISOString()
+            }
+          }
+        } catch {
+          console.log(`[Fetcher] LKML - 日期解析失败: ${dateStr}`)
+        }
+      }
       
-      let summary = ''
-      try {
-        summary = await summarizeContent(title, content)
-      } catch (error) {
-        console.error('生成摘要失败:', error)
-        summary = title.substring(0, 100) + '...'
+      const message: LKMLMessage = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: fullUrl,
+        title,
+        author,
+        date: parsedDate,
+        content: '',
+        isReply: false
+      }
+      
+      messages.push(message)
+      
+      if (messages.length >= maxPatches) {
+        console.log(`[Fetcher] LKML - 已达到最大数量限制: ${maxPatches}`)
+        break
+      }
+    }
+    
+    console.log(`[Fetcher] LKML - 解析到 ${messages.length} 条patch相关消息`)
+    
+    const articles: Article[] = []
+    
+    for (const msg of messages) {
+      if (!force && processedUrls.has(msg.url)) {
+        console.log(`[Fetcher] LKML - 跳过已处理: ${msg.title.substring(0, 50)}...`)
+        continue
+      }
+      
+      console.log(`[Fetcher] LKML - 处理补丁: ${msg.title.substring(0, 50)}...`)
+      
+      const content = `Linux内核邮件列表: ${msg.title}\n链接: ${msg.url}`
+      
+      const analysis = await analyzePatch(msg.title, content, source.aiPrompt)
+      
+      const patchData: LKMLPatch = {
+        id: `patch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: msg.title,
+        url: msg.url,
+        author: msg.author,
+        date: msg.date,
+        content,
+        subsystem: analysis.subsystem,
+        type: analysis.type,
+        highlight: analysis.highlight,
+        summary: analysis.summary,
+        messages: [msg],
+        replyCount: 0
       }
       
       const article: Article = {
@@ -288,21 +370,35 @@ export async function fetchLKML(source: Source, processedUrls: Set<string>, forc
         sourceId: source.id,
         sourceName: source.name,
         sourceUrl: source.url,
-        title,
+        title: msg.title,
         content,
-        summary,
-        url: fullUrl,
-        fetchedAt: new Date().toISOString()
+        summary: analysis.summary,
+        url: msg.url,
+        author: msg.author,
+        fetchedAt: new Date().toISOString(),
+        highlight: analysis.highlight,
+        patchData
       }
       
       articles.push(article)
     }
     
-    console.log(`[Fetcher] LKML - 最终获取 ${articles.length} 篇patch相关文章`)
-    return articles
+    const sortedArticles = articles.sort((a, b) => {
+      if (a.highlight && !b.highlight) return -1
+      if (!a.highlight && b.highlight) return 1
+      
+      const typeOrder = { 'feature': 0, 'bugfix': 1, 'other': 2 }
+      const aType = a.patchData?.type || 'other'
+      const bType = b.patchData?.type || 'other'
+      const aOrder = typeOrder[aType as keyof typeof typeOrder] ?? 2
+      const bOrder = typeOrder[bType as keyof typeof typeOrder] ?? 2
+      return aOrder - bOrder
+    })
+    
+    console.log(`[Fetcher] LKML - 最终获取 ${sortedArticles.length} 篇文章 (${sortedArticles.filter(a => a.highlight).length} 篇重点)`)
+    return sortedArticles
   } catch (error) {
     console.error(`LKML抓取失败 [${source.name}]:`, error)
-    // 不抛出错误，让抓取继续进行
     return []
   }
 }
@@ -336,14 +432,6 @@ export async function fetchCrawler(source: Source, processedUrls: Set<string>, f
 
       if (!force && processedUrls.has(fullUrl)) continue
 
-      let summary = ''
-      try {
-        summary = await summarizeContent(title, content)
-      } catch (error) {
-        console.error('生成摘要失败:', error)
-        summary = content.substring(0, 100) + '...'
-      }
-
       const article: Article = {
         id: generateArticleId(),
         sourceId: source.id,
@@ -351,7 +439,6 @@ export async function fetchCrawler(source: Source, processedUrls: Set<string>, f
         sourceUrl: source.url,
         title,
         content,
-        summary,
         url: fullUrl,
         fetchedAt: new Date().toISOString()
       }
@@ -366,10 +453,9 @@ export async function fetchCrawler(source: Source, processedUrls: Set<string>, f
   }
 }
 
-export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, category?: string): Promise<Article[]> {
+export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, category?: string, debug: boolean = false): Promise<Article[]> {
   let sources = loadSources().filter(s => s.active)
   
-  // 如果指定了分类，只加载该分类的信息源
   if (category) {
     sources = sources.filter(s => s.category === category)
     console.log(`[Fetcher] 只抓取分类 "${category}" 的 ${sources.length} 个信息源`)
@@ -397,7 +483,7 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
           articles = await fetchCrawler(source, processedUrls, force)
           break
         case 'lkml':
-          articles = await fetchLKML(source, processedUrls, force)
+          articles = await fetchLKML(source, processedUrls, force, debug)
           break
         default:
           console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
@@ -427,12 +513,14 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
 }
 
 export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
-  const { force = false, skipRefresh = false, category } = options
+  const { force = false, skipRefresh = false, category, debug = false } = options
   const todayStr = getTodayString()
-  const sources = loadSources().filter(s => s.active)
+  const sourcesConfig = loadSourcesConfig()
+  const sources = sourcesConfig.sources.filter(s => s.active)
+  const globalConfig = sourcesConfig.globalConfig
   
   console.log(`[Fetcher] 开始抓取并保存数据...`)
-  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}${category ? `, category=${category}` : ''}`)
+  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}${category ? `, category=${category}` : ''}${debug ? ', debug=true' : ''}`)
   
   if (!skipRefresh) {
     await refreshWeWeRSS()
@@ -443,14 +531,13 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
   const processedUrls = loadProcessedUrls()
   console.log(`[Fetcher] 已加载 ${processedUrls.size} 条已处理URL记录`)
   
-  const newArticles = await fetchAllSources(processedUrls, force, category)
+  const newArticles = await fetchAllSources(processedUrls, force, category, debug)
   
   if (newArticles.length === 0) {
     console.log(`[Fetcher] 没有新文章，跳过保存`)
     return
   }
   
-  // 保存新文章的URL到已处理记录
   newArticles.forEach(article => {
     if (article.url) {
       processedUrls.add(article.url)
@@ -458,72 +545,88 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
   })
   saveProcessedUrls(processedUrls)
   
-  // 加载已有数据（如果存在）
-  let existingDayData = loadDayData(todayStr)
-  let allArticles = [...newArticles]
+  let allArticles: Article[]
   
-  if (existingDayData && existingDayData.articles.length > 0) {
-    // 合并新旧文章，去重（基于URL）
-    const existingUrls = new Set(existingDayData.articles.map(a => a.url))
-    const uniqueNewArticles = newArticles.filter(a => !existingUrls.has(a.url))
-    
-    allArticles = [...existingDayData.articles, ...uniqueNewArticles]
-    console.log(`[Fetcher] 合并新旧文章: 已有 ${existingDayData.articles.length} 篇，新增 ${uniqueNewArticles.length} 篇，总计 ${allArticles.length} 篇`)
+  if (debug) {
+    allArticles = newArticles
+    console.log(`[Fetcher] Debug 模式: 不合并旧数据，仅处理新抓取的 ${newArticles.length} 篇文章`)
   } else {
-    console.log(`[Fetcher] 新增 ${newArticles.length} 篇文章`)
+    let existingDayData = loadDayData(todayStr)
+    allArticles = [...newArticles]
+    
+    if (existingDayData && existingDayData.articles.length > 0) {
+      const existingUrls = new Set(existingDayData.articles.map(a => a.url))
+      const uniqueNewArticles = newArticles.filter(a => !existingUrls.has(a.url))
+      
+      allArticles = [...existingDayData.articles, ...uniqueNewArticles]
+      console.log(`[Fetcher] 合并新旧文章: 已有 ${existingDayData.articles.length} 篇，新增 ${uniqueNewArticles.length} 篇，总计 ${allArticles.length} 篇`)
+    } else {
+      console.log(`[Fetcher] 新增 ${newArticles.length} 篇文章`)
+    }
   }
   
-  console.log(`[AI] 生成每日摘要...`)
-  const summary = await generateDailySummary(allArticles.map(a => ({
-    title: a.title,
-    content: a.content,
-    sourceName: a.sourceName
-  })))
+  clearAllCategoryContexts()
+  
+  const categoryArticles: Record<string, Article[]> = {}
+  const categorySummaries: Record<string, string> = {}
+  
+  allArticles.forEach(article => {
+    const source = sources.find(s => s.id === article.sourceId)
+    const cat = source?.category || '未分类'
+    
+    if (!categoryArticles[cat]) {
+      categoryArticles[cat] = []
+    }
+    categoryArticles[cat].push(article)
+  })
+  
+  if (debug) {
+    for (const cat of Object.keys(categoryArticles)) {
+      if (categoryArticles[cat].length > 5) {
+        console.log(`[Fetcher] Debug 模式: 限制分类 ${cat} 的文章数量为 5 篇`)
+        categoryArticles[cat] = categoryArticles[cat].slice(0, 5)
+      }
+    }
+  }
+  
+  const sourcePrompts = new Map<string, string>()
+  sources.forEach(source => {
+    if (source.aiPrompt) {
+      sourcePrompts.set(source.id, source.aiPrompt)
+    }
+  })
+  
+  console.log(`[AI] 开始按分类进行 AI 总结...`)
+  
+  for (const cat of Object.keys(categoryArticles)) {
+    console.log(`[AI] 处理分类: ${cat} (${categoryArticles[cat].length} 篇文章)`)
+    
+    await summarizeArticlesInCategory(
+      categoryArticles[cat],
+      cat,
+      globalConfig,
+      sourcePrompts
+    )
+    
+    const catSummary = await generateCategorySummary(
+      categoryArticles[cat],
+      cat,
+      globalConfig
+    )
+    categorySummaries[cat] = catSummary
+    console.log(`[AI] 分类 ${cat} 摘要生成完成`)
+  }
   
   const dayData: DayData = {
     date: todayStr,
     generatedAt: new Date().toISOString(),
-    summary,
+    summary: '',
     articles: allArticles,
     sources
   }
   
   saveDayData(dayData)
   
-  // 分类处理 - 使用所有文章（合并后的）
-  const categorySummaries: Record<string, string> = {};
-  const categoryArticles: Record<string, Article[]> = {};
-  
-  // 将所有文章分类
-  allArticles.forEach(article => {
-    const source = sources.find(s => s.id === article.sourceId)
-    const category = source?.category || '未分类'
-    
-    if (!categoryArticles[category]) {
-      categoryArticles[category] = []
-    }
-    categoryArticles[category].push(article)
-  })
-  
-  // 为每个分类生成摘要
-  for (const category of Object.keys(categoryArticles)) {
-    if (categoryArticles[category].length > 0) {
-      try {
-        const catSummary = await generateDailySummary(
-          categoryArticles[category].map(a => ({
-            title: a.title,
-            content: a.content,
-            sourceName: a.sourceName
-          }))
-        )
-        categorySummaries[category] = catSummary
-      } catch (error) {
-        console.error(`[AI] 生成 ${category} 分类摘要失败:`, error)
-      }
-    }
-  }
-  
-  // 保存所有分类数据（使用合并后的所有文章）
   saveAllCategoryData(allArticles, sources, todayStr, categorySummaries)
   
   console.log(`[Fetcher] 数据保存完成！`)

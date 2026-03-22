@@ -13,6 +13,24 @@ export interface Source {
   category: string
   active: boolean
   config?: string
+  aiPrompt?: string
+  excludeAuthors?: string[]
+}
+
+export interface CategoryPrompt {
+  summaryPrompt?: string
+  categorySummaryPrompt?: string
+}
+
+export interface GlobalConfig {
+  defaultSummaryPrompt: string
+  defaultCategorySummaryPrompt: string
+  categoryPrompts?: Record<string, CategoryPrompt>
+}
+
+export interface SourcesConfig {
+  globalConfig: GlobalConfig
+  sources: Source[]
 }
 
 export interface Article {
@@ -27,6 +45,8 @@ export interface Article {
   author?: string
   publishedAt?: string
   fetchedAt: string
+  highlight?: boolean
+  patchData?: LKMLPatch
 }
 
 export interface DayData {
@@ -56,6 +76,35 @@ export interface ProcessedArticles {
   urls: string[]
 }
 
+export type PatchType = 'feature' | 'bugfix' | 'other'
+
+export type KernelSubsystem = 'sched' | 'mm' | 'fs' | 'net' | 'driver' | 'security' | 'arch' | 'other'
+
+export interface LKMLMessage {
+  id: string
+  url: string
+  title: string
+  author: string
+  date: string
+  content: string
+  isReply: boolean
+}
+
+export interface LKMLPatch {
+  id: string
+  title: string
+  url: string
+  author: string
+  date: string
+  content: string
+  subsystem: KernelSubsystem
+  type: PatchType
+  highlight: boolean
+  summary: string
+  messages: LKMLMessage[]
+  replyCount: number
+}
+
 function ensureDirectoryExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true })
@@ -69,11 +118,44 @@ export function loadSources(): Source[] {
       return []
     }
     const content = fs.readFileSync(SOURCES_CONFIG_PATH, 'utf8')
-    const config = JSON.parse(content)
+    const config: SourcesConfig = JSON.parse(content)
     return config.sources || []
   } catch (error) {
     console.error('[Storage] 加载信息源配置失败:', error)
     return []
+  }
+}
+
+export function loadGlobalConfig(): GlobalConfig {
+  const defaultConfig: GlobalConfig = {
+    defaultSummaryPrompt: '你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。',
+    defaultCategorySummaryPrompt: '你是一个信息整合助手。请根据今日收集的文章，生成一份简洁的每日信息摘要。'
+  }
+  
+  try {
+    if (!fs.existsSync(SOURCES_CONFIG_PATH)) {
+      return defaultConfig
+    }
+    const content = fs.readFileSync(SOURCES_CONFIG_PATH, 'utf8')
+    const config: SourcesConfig = JSON.parse(content)
+    return config.globalConfig || defaultConfig
+  } catch (error) {
+    console.error('[Storage] 加载全局配置失败:', error)
+    return defaultConfig
+  }
+}
+
+export function loadSourcesConfig(): SourcesConfig {
+  try {
+    if (!fs.existsSync(SOURCES_CONFIG_PATH)) {
+      console.error('[Storage] 信息源配置文件不存在:', SOURCES_CONFIG_PATH)
+      return { globalConfig: loadGlobalConfig(), sources: [] }
+    }
+    const content = fs.readFileSync(SOURCES_CONFIG_PATH, 'utf8')
+    return JSON.parse(content)
+  } catch (error) {
+    console.error('[Storage] 加载信息源配置失败:', error)
+    return { globalConfig: loadGlobalConfig(), sources: [] }
   }
 }
 

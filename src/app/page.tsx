@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { dayDataApi, type DayData, type CategoryData } from '@/lib/api'
 import ArticleCard from '@/components/ArticleCard'
+import LKMLPatchCard from '@/components/LKMLPatchCard'
 import ReactMarkdown from 'react-markdown'
 
 const categoryEmoji: Record<string, string> = {
@@ -14,6 +15,7 @@ const categoryEmoji: Record<string, string> = {
   '财经': '💰',
   '新闻': '📰',
   '国际': '🌍',
+  'linux kernel': '🐧',
   '未分类': '📄'
 }
 
@@ -63,7 +65,6 @@ export default function HomePage() {
         const data = await dayDataApi.getCategoryData(selectedCategory, selectedDate)
         setCategoryData(data)
         
-        // 加载完整的dayData来获取全部分类列表
         const fullDayData = await dayDataApi.getDayData(selectedDate)
         if (fullDayData) {
           const cats = dayDataApi.getCategoriesFromDayData(fullDayData)
@@ -94,12 +95,20 @@ export default function HomePage() {
     return `${month}月${day}日 ${weekdays[date.getDay()]}`
   }
 
+  const sortArticlesByHighlight = (articles: any[]) => {
+    return [...articles].sort((a, b) => {
+      if (a.highlight && !b.highlight) return -1
+      if (!a.highlight && b.highlight) return 1
+      return new Date(b.fetchedAt).getTime() - new Date(a.fetchedAt).getTime()
+    })
+  }
+
   const getGroupedArticles = () => {
     const data = dayData || categoryData
     if (!data) return {}
     
     if (categoryData) {
-      return { [categoryData.category]: categoryData.articles }
+      return { [categoryData.category]: sortArticlesByHighlight(categoryData.articles) }
     }
     
     const grouped: Record<string, any[]> = {}
@@ -114,6 +123,10 @@ export default function HomePage() {
       grouped[category].push(article)
     })
     
+    Object.keys(grouped).forEach(category => {
+      grouped[category] = sortArticlesByHighlight(grouped[category])
+    })
+    
     return grouped
   }
 
@@ -125,7 +138,6 @@ export default function HomePage() {
     return (categoryData || dayData)?.summary || ''
   }
 
-  // 在组件渲染时重新计算这些值
   const groupedArticles = getGroupedArticles()
   const articles = getArticles()
   const summary = getSummary()
@@ -178,7 +190,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {summary && (
+        {selectedCategory !== 'all' && summary && (
           <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
             <div className="flex items-start gap-3">
               <span className="text-2xl flex-shrink-0">💡</span>
@@ -238,7 +250,11 @@ export default function HomePage() {
                 </h2>
                 <div className="space-y-3">
                   {categoryArticles.map((article: any) => (
-                    <ArticleCard key={article.id} article={article} />
+                    category === 'linux kernel' ? (
+                      <LKMLPatchCard key={article.id} article={article} />
+                    ) : (
+                      <ArticleCard key={article.id} article={article} />
+                    )
                   ))}
                 </div>
               </div>

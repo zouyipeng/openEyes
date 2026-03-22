@@ -1,4 +1,22 @@
 {
+  "globalConfig": {
+    "defaultSummaryPrompt": "你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
+    "defaultCategorySummaryPrompt": "你是一个信息整合助手。请根据今日收集的文章，生成一份简洁的每日信息摘要。\n\n格式要求：\n### 主要话题和趋势\n（总结今日热点）\n\n### 重要信息点\n（列出关键信息）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。",
+    "categoryPrompts": {
+      "AI": {
+        "summaryPrompt": "你是一个AI领域的专业编辑。请用简洁的中文总结以下AI相关文章的核心内容，突出技术亮点和行业影响，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
+        "categorySummaryPrompt": "你是一个AI领域的专业编辑。请根据今日收集的AI相关文章，生成一份简洁的摘要。\n\n格式要求：\n### 技术动态\n（总结AI技术进展）\n\n### 行业资讯\n（列出重要行业新闻）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
+      },
+      "linux kernel": {
+        "summaryPrompt": "你是一个Linux内核开发专家。请用简洁的中文总结这个补丁的主要改动点，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
+        "categorySummaryPrompt": "你是一个Linux内核开发专家。请根据今日收集的内核补丁，生成一份简洁的摘要。\n\n格式要求：\n### 重点补丁\n（列出重要的补丁）\n\n### 子系统动态\n（总结各子系统变化）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
+      },
+      "魔兽世界": {
+        "summaryPrompt": "你是一个魔兽世界的专业编辑。请用简洁的中文总结以下魔兽世界相关文章的核心内容，突出游戏更新、版本动态和玩家关注点，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
+        "categorySummaryPrompt": "你是一个魔兽世界的专业编辑。请根据今日收集的魔兽世界相关文章，生成一份简洁的摘要。\n\n格式要求：\n### 游戏动态\n（总结游戏更新和版本资讯）\n\n### 玩家关注\n（列出玩家关心的内容）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
+      }
+    }
+  },
   "sources": [
     {
       "id": "36kr-ai",
@@ -77,7 +95,7 @@
       "name": "魔兽世界",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_2390039799.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -85,7 +103,7 @@
       "name": "艾泽拉斯快讯",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3885101127.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -93,7 +111,7 @@
       "name": "怀旧服",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3097421364.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -101,7 +119,7 @@
       "name": "魔兽世界怀旧服攻略大全",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3569532524.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -109,7 +127,7 @@
       "name": "魔兽世界服务中心",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3574220323.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -117,7 +135,7 @@
       "name": "Warcraftlogs",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3877714219.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -125,7 +143,7 @@
       "name": "怀旧魔兽",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3007058758.rss",
-      "category": "游戏",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -133,39 +151,7 @@
       "name": "魔兽攻略大全",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3914371813.rss",
-      "category": "游戏",
-      "active": true
-    },
-    {
-      "id": "wechat-kernelgongjiang",
-      "name": "kernel工匠",
-      "type": "rss",
-      "url": "http://localhost:4000/feeds/MP_WXS_3932678245.rss",
-      "category": "技术",
-      "active": true
-    },
-    {
-      "id": "wechat-linuxkernelconf",
-      "name": "Linux内核开发者大会",
-      "type": "rss",
-      "url": "http://localhost:4000/feeds/MP_WXS_3093862571.rss",
-      "category": "技术",
-      "active": true
-    },
-    {
-      "id": "wechat-linuxkerneltrip",
-      "name": "Linux内核之旅",
-      "type": "rss",
-      "url": "http://localhost:4000/feeds/MP_WXS_3277093514.rss",
-      "category": "技术",
-      "active": true
-    },
-    {
-      "id": "wechat-oppokernel",
-      "name": "OPPO内核工匠",
-      "type": "rss",
-      "url": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
-      "category": "技术",
+      "category": "魔兽世界",
       "active": true
     },
     {
@@ -174,7 +160,8 @@
       "type": "lkml",
       "url": "https://lkml.org/",
       "category": "linux kernel",
-      "active": true
+      "active": true,
+      "excludeAuthors": ["kernel test robot"]
     }
   ]
 }
