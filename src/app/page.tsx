@@ -62,23 +62,14 @@ export default function HomePage() {
       } else {
         const data = await dayDataApi.getCategoryData(selectedCategory, selectedDate)
         setCategoryData(data)
-        setDayData(null)
         
-        // 如果有分类数据，使用其来源来获取分类列表
-        if (data) {
-          // 从分类数据的来源中提取所有唯一分类
-          const categoriesSet = new Set<string>()
-          data.sources.forEach(source => {
-            if (source.category) {
-              categoriesSet.add(source.category)
-            }
-          })
-          const cats = Array.from(categoriesSet)
+        // 加载完整的dayData来获取全部分类列表
+        const fullDayData = await dayDataApi.getDayData(selectedDate)
+        if (fullDayData) {
+          const cats = dayDataApi.getCategoriesFromDayData(fullDayData)
           setCategories(cats)
-        } else if (dayData) {
-          // 回退到使用dayData
-          const cats = dayDataApi.getCategoriesFromDayData(dayData)
-          setCategories(cats)
+        } else {
+          setCategories([])
         }
       }
     } catch (error) {
