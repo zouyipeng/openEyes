@@ -161,11 +161,19 @@
       "active": true
     },
     {
-  "id": "wechat-oppokernel",
+      "id": "wechat-oppokernel",
       "name": "OPPO内核工匠",
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
       "category": "技术",
+      "active": true
+    },
+    {
+      "id": "lkml-today",
+      "name": "Linux Kernel Mailing List",
+      "type": "lkml",
+      "url": "https://lkml.org/",
+      "category": "linux kernel",
       "active": true
     }
   ]

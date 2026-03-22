@@ -21,6 +21,7 @@ import path from 'path'
 interface FetchOptions {
   force?: boolean
   skipRefresh?: boolean
+  category?: string
 }
 
 interface SourceConfig {
@@ -213,6 +214,99 @@ export async function fetchRSS(source: Source, processedUrls: Set<string>, force
   }
 }
 
+export async function fetchLKML(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
+  try {
+    // 尝试访问last100 messages页面，而不是today页面
+    const last100Url = new URL('/lkml/last100/', source.url).href
+    
+    console.log(`[Fetcher] LKML - 正在访问: ${last100Url}`)
+    
+    const response = await axios.get(last100Url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 10000
+    })
+    
+    console.log(`[Fetcher] LKML - 响应状态: ${response.status}`)
+    
+    // 保存页面内容以便分析
+    const fs = require('fs')
+    const pageContentPath = path.join(__dirname, '..', '..', 'lkml-page.html')
+    fs.writeFileSync(pageContentPath, response.data)
+    console.log(`[Fetcher] LKML - 页面内容已保存到: ${pageContentPath}`)
+    
+    const $ = cheerio.load(response.data)
+    const articles: Article[] = []
+    
+    // 查找所有的消息条目 - 正确的选择器应该是table.mh下的tr.c0和tr.c1
+    const messageEntries = $('table.mh tr.c0, table.mh tr.c1')
+    
+    console.log(`[Fetcher] LKML - 找到 ${messageEntries.length} 条消息`)
+    
+    // 从表格行中提取消息
+    for (const element of messageEntries.toArray()) {
+      const $entry = $(element)
+      const $tds = $entry.find('td')
+      
+      // 第二条td包含标题链接
+      const $titleTd = $tds.eq(1)
+      const $link = $titleTd.find('a:first-child')
+      
+      const title = $link.text().trim()
+      const link = $link.attr('href')
+      
+      // 只打印前5个条目的信息以便调试
+      if (articles.length < 5) {
+        console.log(`[Fetcher] LKML - 条目: title="${title}", link="${link}"`)
+      }
+      
+      if (!title || !link) continue
+      
+      // 只抓取patch相关的讨论
+      if (!title.toLowerCase().includes('patch') && !title.toLowerCase().includes('diff')) {
+        continue
+      }
+      
+      const fullUrl = link.startsWith('http') ? link : new URL(link, source.url).href
+      
+      if (!force && processedUrls.has(fullUrl)) continue
+      
+      // 从标题和链接中提取内容
+      const content = `Linux内核邮件列表讨论: ${title}\n链接: ${fullUrl}`
+      
+      let summary = ''
+      try {
+        summary = await summarizeContent(title, content)
+      } catch (error) {
+        console.error('生成摘要失败:', error)
+        summary = title.substring(0, 100) + '...'
+      }
+      
+      const article: Article = {
+        id: generateArticleId(),
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceUrl: source.url,
+        title,
+        content,
+        summary,
+        url: fullUrl,
+        fetchedAt: new Date().toISOString()
+      }
+      
+      articles.push(article)
+    }
+    
+    console.log(`[Fetcher] LKML - 最终获取 ${articles.length} 篇patch相关文章`)
+    return articles
+  } catch (error) {
+    console.error(`LKML抓取失败 [${source.name}]:`, error)
+    // 不抛出错误，让抓取继续进行
+    return []
+  }
+}
+
 export async function fetchCrawler(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
   try {
     const config: SourceConfig = source.config ? JSON.parse(source.config as any) : {}
@@ -272,10 +366,16 @@ export async function fetchCrawler(source: Source, processedUrls: Set<string>, f
   }
 }
 
-export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
-  const sources = loadSources().filter(s => s.active)
-
-  console.log(`[Fetcher] 开始抓取 ${sources.length} 个信息源`)
+export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, category?: string): Promise<Article[]> {
+  let sources = loadSources().filter(s => s.active)
+  
+  // 如果指定了分类，只加载该分类的信息源
+  if (category) {
+    sources = sources.filter(s => s.category === category)
+    console.log(`[Fetcher] 只抓取分类 "${category}" 的 ${sources.length} 个信息源`)
+  } else {
+    console.log(`[Fetcher] 开始抓取所有 ${sources.length} 个信息源`)
+  }
 
   const results = {
     success: 0,
@@ -295,6 +395,9 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
           break
         case 'crawler':
           articles = await fetchCrawler(source, processedUrls, force)
+          break
+        case 'lkml':
+          articles = await fetchLKML(source, processedUrls, force)
           break
         default:
           console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
@@ -324,12 +427,12 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
 }
 
 export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
-  const { force = false, skipRefresh = false } = options
+  const { force = false, skipRefresh = false, category } = options
   const todayStr = getTodayString()
   const sources = loadSources().filter(s => s.active)
   
   console.log(`[Fetcher] 开始抓取并保存数据...`)
-  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}`)
+  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}${category ? `, category=${category}` : ''}`)
   
   if (!skipRefresh) {
     await refreshWeWeRSS()
@@ -340,7 +443,7 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
   const processedUrls = loadProcessedUrls()
   console.log(`[Fetcher] 已加载 ${processedUrls.size} 条已处理URL记录`)
   
-  const newArticles = await fetchAllSources(processedUrls, force)
+  const newArticles = await fetchAllSources(processedUrls, force, category)
   
   if (newArticles.length === 0) {
     console.log(`[Fetcher] 没有新文章，跳过保存`)

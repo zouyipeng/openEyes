@@ -28,15 +28,17 @@ program
 
 program
   .command('fetch')
-  .description('抓取所有信息源的内容并保存')
+  .description('抓取信息源的内容并保存')
   .option('-f, --force', '强制重新抓取（忽略已处理记录）')
   .option('-s, --skip-refresh', '跳过 WeWe RSS 刷新')
+  .option('-c, --category <category>', '只抓取指定分类的信息源')
   .action(async (options) => {
     console.log('开始抓取信息...')
     try {
       await fetchAndSave({
         force: options.force || false,
-        skipRefresh: options.skipRefresh || false
+        skipRefresh: options.skipRefresh || false,
+        category: options.category
       })
     } catch (error) {
       console.error('抓取失败:', error)

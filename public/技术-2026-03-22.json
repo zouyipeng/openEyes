@@ -1,0 +1,50 @@
+{
+  "category": "技术",
+  "date": "2026-03-22",
+  "generatedAt": "2026-03-22T07:45:08.716Z",
+  "summary": "## 每日信息摘要\n### 主要话题和趋势\n**第20届中国Linux内核开发者大会（CLK）即将举办**，这是国内最具影响力的Linux内核技术盛会，今年恰逢20周年。大会延续\"纯技术、重讨论\"的风格，设置主论坛及内存管理、文件系统与存储等多个分论坛，提供直播观看渠道。\n**内核开发持续活跃**，今日LKML提交了多项重要补丁，涵盖调度器扩展（sched_ext）、龙芯处理器支持、内存管理优化及多个驱动修复。\n### 重要信息点\n- **CLK大会20周年**：近400位内核专家相聚华科，线上线下参与人数屡创新高\n- **Loongson-2K0300处理器支持**：龙芯架构补丁进入v5版本，将为Linux主线增加新芯片支持\n- **sched_ext调度扩展**：新增SCX_ENQ_IMMED测试用例，完善兼容性处理\n- **MGLRU内存回收优化**：防止回收操作固定内存地址，提升系统灵活性\n- **安全修复**：vt控制台修复slab-out-of-bounds写入漏洞\n### 推荐阅读\n- [第20届CLK大会直播入口](https://live.csdn.net/room/csdnnews/sRo9xpH5)（主论坛）\n- [Loongson-2K0300支持补丁系列](https://lkml.org/lkml/2026/3/22/121)\n- [MGLRU回收优化补丁](https://lkml.org/lkml/2026/3/22/116)",
+  "articles": [
+    {
+      "id": "art_1774163962946_xdndbwzjn",
+      "sourceId": "wechat-linuxkernelconf",
+      "sourceName": "Linux内核开发者大会",
+      "sourceUrl": "http://localhost:4000/feeds/MP_WXS_3093862571.rss",
+      "title": "CLK 大会的 20 年：纯技术、重讨论",
+      "content": "Linux内核开发者大会 （完）往期精彩回顾跨越二十载，共赴内核之约：第20届CLK大会圆满落幕，见证中国内核力量崛起近400位内核专家相聚华科，第19届CLK大会圆满落幕，硬核回放已上线线上线下参与人数均创新高 | 第 18 届 CLK 大会圆满落幕，精彩回放已上线35位大咖3.3万人观看｜第17届CLK大会圆满落幕，精彩回放已上线31位大咖25万人次！第16届CLK大会圆满落幕，精彩回放已上线",
+      "summary": "CLK大会是中国Linux内核开发者年度盛会，已举办20届，坚持纯技术分享与深度讨论。大会规模逐年扩大，第20届在华科举办，近几届汇聚30多位专家、吸引数十万人次参与，见证中国内核技术社区的蓬勃发展。",
+      "url": "https://mp.weixin.qq.com/s/oD_ApZhDfbhWzV2B_Oe0FQ",
+      "publishedAt": "Thu, 20 Nov 2025 11:00:17 GMT",
+      "fetchedAt": "2026-03-22T07:19:22.946Z"
+    },
+    {
+      "id": "art_1774163968212_dgzk4tkrh",
+      "sourceId": "wechat-oppokernel",
+      "sourceName": "OPPO内核工匠",
+      "sourceUrl": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
+      "title": "倒计时1天，第20届「CLK大会」全议程和直播链接公开",
+      "content": "OPPO内核工匠 直播观看地址：第二十届中国Linux内核开发者大会【主论坛】 https://live.csdn.net/room/csdnnews/sRo9xpH5 分论坛一：内存管理与优化 https://live.csdn.net/room/csdnnews/9T61iz2g 分论坛二：文件系统与存储 https://live.csdn.net/room/wl5875/wtubIXo0 分论坛三：调度、性能与调试 https://live.csdn.net/room/Hansen666666/Wr1zJj85 分论坛四：硬件架构与异构计算 https://live.csdn.net/room/csdnlive1/cxfQmtA7 分论坛五：AI基础设施与eBPF应用 https://live.csdn.net/room/csdnlive2/Wx1LFn6l（完）",
+      "summary": "第20届中国Linux内核开发者大会明日开幕，OPPO内核工匠主办。大会设6个分会场，涵盖内存管理、文件系统、调度性能、硬件架构、AI基础设施与eBPF应用等领域。提供多个直播平台链接，观众可通过CSDN直播平台观看各论坛内容。",
+      "url": "https://mp.weixin.qq.com/s/A8ZFg2tD_9eZULvFy78WVQ",
+      "publishedAt": "Fri, 31 Oct 2025 04:04:38 GMT",
+      "fetchedAt": "2026-03-22T07:19:28.212Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "wechat-linuxkernelconf",
+      "name": "Linux内核开发者大会",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3093862571.rss",
+      "category": "技术",
+      "active": true
+    },
+    {
+      "id": "wechat-oppokernel",
+      "name": "OPPO内核工匠",
+      "type": "rss",
+      "url": "http://localhost:4000/feeds/MP_WXS_3010346114.rss",
+      "category": "技术",
+      "active": true
+    }
+  ]
+}
