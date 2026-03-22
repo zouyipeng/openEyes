@@ -73,10 +73,16 @@ export const dayDataApi = {
 
   getCategoryData: async (category: string, dateStr: string): Promise<CategoryData | null> => {
     try {
-      const response = await fetch(`/${category}-${dateStr}.json`)
+      const url = `/${category}-${dateStr}.json`
+      console.log('尝试加载分类数据:', url)
+      const response = await fetch(url)
+      console.log('分类数据响应状态:', response.status)
       if (response.ok) {
-        return await response.json()
+        const data = await response.json()
+        console.log('加载到的分类数据:', { category: data.category, summaryLength: data.summary.length })
+        return data
       }
+      console.log('分类数据加载失败:', response.status, response.statusText)
       return null
     } catch (error) {
       console.error('读取分类数据失败:', error)

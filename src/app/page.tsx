@@ -122,7 +122,7 @@ export default function HomePage() {
   }
 
   const getSummary = () => {
-    return (dayData || categoryData)?.summary || ''
+    return (categoryData || dayData)?.summary || ''
   }
 
   // 在组件渲染时重新计算这些值
