@@ -7,14 +7,14 @@
         "summaryPrompt": "你是一个AI领域的专业编辑。请用简洁的中文总结以下AI相关文章的核心内容，突出技术亮点和行业影响，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
         "categorySummaryPrompt": "你是一个AI领域的专业编辑。请根据今日收集的AI相关文章，生成一份简洁的摘要。\n\n格式要求：\n### 技术动态\n（总结AI技术进展）\n\n### 行业资讯\n（列出重要行业新闻）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
       },
-      "linux kernel": {
-        "summaryPrompt": "你是一个Linux内核开发专家。请用简洁的中文总结这个补丁的主要改动点，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
-        "categorySummaryPrompt": "你是一个Linux内核开发专家。请根据今日收集的内核补丁，生成一份简洁的摘要。\n\n格式要求：\n### 重点补丁\n（列出重要的补丁）\n\n### 子系统动态\n（总结各子系统变化）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
-      },
       "魔兽世界": {
         "summaryPrompt": "你是一个魔兽世界的专业编辑。请用简洁的中文总结以下魔兽世界相关文章的核心内容，突出游戏更新、版本动态和玩家关注点，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
         "categorySummaryPrompt": "你是一个魔兽世界的专业编辑。请根据今日收集的魔兽世界相关文章，生成一份简洁的摘要。\n\n格式要求：\n### 游戏动态\n（总结游戏更新和版本资讯）\n\n### 玩家关注\n（列出玩家关心的内容）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字以内。不要输出思考过程。"
-      }
+      },
+      "linux kernel": {
+        "summaryPrompt": "你是一个Linux内核开发专家。请用简洁的中文总结这个补丁的主要改动点，并给出自己的评论，字数在100字左右。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。",
+        "categorySummaryPrompt": "你是一个Linux内核开发专家。请根据今日收集的内核补丁，生成一份简洁的摘要并给出自己的评论。\n\n格式要求：\n### 重点补丁\n（列出重要的补丁）\n\n### 子系统动态\n（总结各子系统变化）\n\n注意：不要在最开头添加大标题，直接从内容开始。\n\n用中文回复，控制在300字左右。不要输出思考过程。"
+      },
     }
   },
   "sources": [
@@ -24,7 +24,7 @@
       "type": "rss",
       "url": "https://36kr.com/feed",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "qbitai",
@@ -32,7 +32,7 @@
       "type": "rss",
       "url": "https://www.qbitai.com/feed",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-xinzhiyuan",
@@ -40,7 +40,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3271041950.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-liangziwei",
@@ -48,7 +48,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3236757533.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-jiqizhixin",
@@ -56,7 +56,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3073282833.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-aikjpl",
@@ -64,7 +64,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3098132220.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-aixinbang",
@@ -72,7 +72,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3077513493.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-aiqianxian",
@@ -80,7 +80,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3554086560.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-aikjdby",
@@ -88,7 +88,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3884405249.rss",
       "category": "AI",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-wow",
@@ -96,7 +96,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_2390039799.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-aizerlas",
@@ -104,7 +104,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3885101127.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-huaijiufu",
@@ -112,7 +112,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3097421364.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-wowgonglue",
@@ -120,7 +120,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3569532524.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-wowfuwuzhongxin",
@@ -128,7 +128,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3574220323.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-warcraftlogs",
@@ -136,7 +136,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3877714219.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-huaijiumoshou",
@@ -144,7 +144,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3007058758.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "wechat-moshougonglue",
@@ -152,7 +152,7 @@
       "type": "rss",
       "url": "http://localhost:4000/feeds/MP_WXS_3914371813.rss",
       "category": "魔兽世界",
-      "active": true
+      "active": false
     },
     {
       "id": "lkml-today",
