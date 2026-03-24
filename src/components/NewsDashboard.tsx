@@ -209,7 +209,9 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
     const dates = await dayDataApi.getAvailableDates()
     setAvailableDates(dates)
     
-    if (dates.length > 0) {
+    if (initialDate && dates.includes(initialDate)) {
+      setSelectedDate(initialDate)
+    } else if (dates.length > 0) {
       setSelectedDate(dates[0])
     }
   }
