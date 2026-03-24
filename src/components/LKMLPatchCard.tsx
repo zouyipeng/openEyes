@@ -49,9 +49,9 @@ interface LKMLPatchCardProps {
 }
 
 const typeColor: Record<string, string> = {
-  feature: 'bg-green-900 text-green-300',
-  bugfix: 'bg-red-900 text-red-300',
-  other: 'bg-gray-700 text-gray-300',
+  feature: 'bg-emerald-100 text-emerald-700',
+  bugfix: 'bg-rose-100 text-rose-700',
+  other: 'bg-slate-100 text-slate-700',
 }
 
 const typeLabel: Record<string, string> = {
@@ -82,20 +82,20 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
     return (
       <div
         id={anchorId}
-        className={`scroll-mt-24 bg-gray-900/70 rounded-lg p-2.5 border hover:border-gray-700 transition-all duration-300 ${
+        className={`scroll-mt-24 bg-white rounded-lg p-2.5 border hover:border-slate-300 transition-all duration-300 ${
           isJumpHighlighted
             ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
-            : 'border-gray-800'
+            : 'border-slate-200'
         }`}
       >
         <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
-          <h3 className="min-w-0 flex-1 text-gray-100 font-medium">
+          <h3 className="min-w-0 flex-1 text-slate-900 font-medium">
             {article.url ? (
               <a
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-blue-300 transition-colors block truncate"
+                className="hover:text-blue-600 transition-colors block truncate"
                 title={article.title}
               >
                 {article.title}
@@ -106,8 +106,8 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
               </span>
             )}
           </h3>
-          {article.author && <span className="text-gray-400 shrink-0 truncate max-w-[140px]">{article.author}</span>}
-          {article.fetchedAt && <span className="text-gray-500 shrink-0">{formatDate(article.fetchedAt)}</span>}
+          {article.author && <span className="text-slate-500 shrink-0 truncate max-w-[140px]">{article.author}</span>}
+          {article.fetchedAt && <span className="text-slate-400 shrink-0">{formatDate(article.fetchedAt)}</span>}
         </div>
       </div>
     )
@@ -116,12 +116,12 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
   return (
     <div
       id={anchorId}
-      className={`scroll-mt-24 bg-gray-900/70 rounded-lg p-2.5 border transition-all duration-300 ${
+      className={`scroll-mt-24 bg-white rounded-lg p-2.5 border transition-all duration-300 ${
         isJumpHighlighted
           ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
           : patch.highlight
-            ? 'border-yellow-600/50 hover:border-yellow-500/50'
-            : 'border-gray-800 hover:border-gray-700'
+            ? 'border-amber-400/60 hover:border-amber-500/70'
+            : 'border-slate-200 hover:border-slate-300'
       }`}
     >
       <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
@@ -130,19 +130,19 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
         >
           {typeLabel[patch.type] || patch.type}
         </span>
-        <h3 className="min-w-0 flex-1 text-gray-100 font-medium">
+        <h3 className="min-w-0 flex-1 text-slate-900 font-medium">
           <a
             href={patch.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-blue-300 transition-colors block truncate"
+            className="hover:text-blue-600 transition-colors block truncate"
             title={patch.title}
           >
             {patch.title}
           </a>
         </h3>
-        <span className="text-gray-400 shrink-0 truncate max-w-[140px]">{patch.author}</span>
-        {patch.date && <span className="text-gray-500 shrink-0">{formatDate(patch.date)}</span>}
+        <span className="text-slate-500 shrink-0 truncate max-w-[140px]">{patch.author}</span>
+        {patch.date && <span className="text-slate-400 shrink-0">{formatDate(patch.date)}</span>}
       </div>
     </div>
   )

@@ -53,27 +53,63 @@ function LkmlTypeStatsBar({ articles }: { articles: any[] }) {
     let feature = 0
     let bugfix = 0
     let other = 0
+    let minTs = Number.POSITIVE_INFINITY
+    let maxTs = Number.NEGATIVE_INFINITY
+
+    const pickTs = (a: any) => {
+      const raw = a?.patchData?.date || a?.fetchedAt
+      if (!raw) return Number.NaN
+      const ts = new Date(raw).getTime()
+      return Number.isNaN(ts) ? Number.NaN : ts
+    }
+
     for (const a of articles) {
       const t = a.patchData?.type
       if (t === 'feature') feature++
       else if (t === 'bugfix') bugfix++
       else other++
+
+      const ts = pickTs(a)
+      if (!Number.isNaN(ts)) {
+        if (ts < minTs) minTs = ts
+        if (ts > maxTs) maxTs = ts
+      }
     }
-    return { total: articles.length, feature, bugfix, other }
+
+    const formatDate = (ts: number) =>
+      new Date(ts).toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+        .replace(/\//g, '-')
+        .replace(/\s/g, '')
+    const dateRange =
+      Number.isFinite(minTs) && Number.isFinite(maxTs)
+        ? `${formatDate(minTs)} ~ ${formatDate(maxTs)}`
+        : ''
+
+    return { total: articles.length, feature, bugfix, other, dateRange }
   }, [articles])
 
   if (stats.total === 0) return null
 
   return (
-    <div className="mb-3 rounded-xl border border-gray-800 bg-gray-900/70 px-3 py-2 text-sm text-gray-300">
-      <span className="text-gray-500 mr-2">今日补丁</span>
-      <span className="text-gray-200 font-medium">{stats.total}</span>
-      <span className="text-gray-600 mx-2">·</span>
-      <span className="text-green-400/90">Feature {stats.feature}</span>
-      <span className="text-gray-600 mx-2">·</span>
-      <span className="text-red-400/90">Bugfix {stats.bugfix}</span>
-      <span className="text-gray-600 mx-2">·</span>
-      <span className="text-gray-400">Other {stats.other}</span>
+    <div className="mb-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+      <span className="text-slate-500 mr-2">今日补丁</span>
+      <span className="text-slate-900 font-medium">{stats.total}</span>
+      <span className="text-slate-300 mx-2">·</span>
+      <span className="text-emerald-600">Feature {stats.feature}</span>
+      <span className="text-slate-300 mx-2">·</span>
+      <span className="text-rose-600">Bugfix {stats.bugfix}</span>
+      <span className="text-slate-300 mx-2">·</span>
+      <span className="text-slate-500">Other {stats.other}</span>
+      {stats.dateRange && (
+        <>
+          <span className="text-slate-300 mx-2">·</span>
+          <span className="text-slate-500">{stats.dateRange}</span>
+        </>
+      )}
     </div>
   )
 }
@@ -109,16 +145,16 @@ function LkmlGroupedList({
         const hiddenCount = Math.max(0, list.length - LKML_COLLAPSE_DEFAULT)
 
         return (
-          <div key={type} className="rounded-xl border border-gray-800 bg-gray-900/50 p-2.5">
+          <div key={type} className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-xs text-gray-300 tracking-wide">
+              <div className="text-xs text-slate-700 tracking-wide">
                 <span className="font-medium">{TYPE_LABEL[type]}</span>
-                <span className="text-gray-500 ml-1">({list.length})</span>
+                <span className="text-slate-400 ml-1">({list.length})</span>
               </div>
               {list.length > LKML_COLLAPSE_DEFAULT && isExpanded && (
                 <button
                   onClick={() => onToggle(type)}
-                  className="rounded-md px-2 py-0.5 text-xs text-sky-300/90 hover:text-sky-200 hover:bg-sky-900/20 transition-colors"
+                  className="rounded-md px-2 py-0.5 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 transition-colors"
                 >
                   收起
                 </button>
@@ -150,7 +186,7 @@ function LkmlGroupedList({
               {list.length > LKML_COLLAPSE_DEFAULT && !isExpanded && (
                 <button
                   onClick={() => onToggle(type)}
-                  className="w-full rounded-lg border border-dashed border-gray-700/90 py-1 text-center text-xs tracking-wide text-gray-500 hover:text-sky-300 hover:border-sky-700/70 transition-colors"
+                  className="w-full rounded-lg border border-dashed border-slate-300 py-1 text-center text-xs tracking-wide text-slate-500 hover:text-sky-600 hover:border-sky-300 transition-colors"
                   title={`展开其余 ${hiddenCount} 条`}
                 >
                   ...
@@ -322,41 +358,41 @@ export default function NewsDashboard({
 
   const categorySummaryComponents = {
     h1: ({ children }: { children?: ReactNode }) => (
-      <h1 className="text-lg font-bold text-gray-100 mt-0 mb-3">{children}</h1>
+      <h1 className="text-lg font-bold text-slate-900 mt-0 mb-3">{children}</h1>
     ),
     h2: ({ children }: { children?: ReactNode }) => (
-      <h2 className="text-base font-semibold text-gray-200 mt-0 mb-2">{children}</h2>
+      <h2 className="text-base font-semibold text-slate-800 mt-0 mb-2">{children}</h2>
     ),
     h3: ({ children }: { children?: ReactNode }) => (
-      <h3 className="text-sm font-bold text-sky-200 mt-4 mb-2 first:mt-0 border-l-2 border-sky-500/60 pl-2.5 [&_strong]:text-sky-50 [&_strong]:font-bold">
+      <h3 className="text-sm font-bold text-sky-700 mt-4 mb-2 first:mt-0 border-l-2 border-sky-500/70 pl-2.5 [&_strong]:text-sky-800 [&_strong]:font-bold">
         {children}
       </h3>
     ),
     p: ({ children }: { children?: ReactNode }) => (
-      <p className="text-sm text-gray-400 my-1 leading-relaxed">{children}</p>
+      <p className="text-sm text-slate-600 my-1 leading-relaxed">{children}</p>
     ),
     ul: ({ children }: { children?: ReactNode }) => (
-      <ul className="text-sm text-gray-400 my-1 pl-4 list-disc">{children}</ul>
+      <ul className="text-sm text-slate-600 my-1 pl-4 list-disc">{children}</ul>
     ),
     ol: ({ children }: { children?: ReactNode }) => (
-      <ol className="text-sm text-gray-400 my-1 pl-4 list-decimal">{children}</ol>
+      <ol className="text-sm text-slate-600 my-1 pl-4 list-decimal">{children}</ol>
     ),
     li: ({ children }: { children?: ReactNode }) => (
-      <li className="text-sm text-gray-400 my-0.5">{children}</li>
+      <li className="text-sm text-slate-600 my-0.5">{children}</li>
     ),
     strong: ({ children }: { children?: ReactNode }) => (
-      <strong className="text-gray-300 font-medium">{children}</strong>
+      <strong className="text-slate-800 font-medium">{children}</strong>
     ),
     blockquote: ({ children }: { children?: ReactNode }) => (
-      <blockquote className="border-l-2 border-gray-600 pl-3 text-gray-400 my-2">{children}</blockquote>
+      <blockquote className="border-l-2 border-slate-300 pl-3 text-slate-600 my-2">{children}</blockquote>
     ),
     code: ({ children }: { children?: ReactNode }) => (
-      <code className="bg-gray-900/70 px-1 py-0.5 rounded text-xs text-gray-300">{children}</code>
+      <code className="bg-slate-100 px-1 py-0.5 rounded text-xs text-slate-700">{children}</code>
     ),
     pre: ({ children }: { children?: ReactNode }) => (
-      <pre className="bg-gray-900/70 p-3 rounded overflow-x-auto text-xs my-2">{children}</pre>
+      <pre className="bg-slate-100 p-3 rounded overflow-x-auto text-xs my-2 text-slate-700">{children}</pre>
     ),
-    hr: () => <hr className="border-gray-700 my-3" />,
+    hr: () => <hr className="border-slate-200 my-3" />,
     a: ({ href, children }: { href?: string; children?: ReactNode }) => {
       if (href?.startsWith('#')) {
         const id = href.slice(1)
@@ -372,8 +408,8 @@ export default function NewsDashboard({
             href={href}
             className={
               isLkmlPatchAnchor
-                ? 'inline-flex items-center justify-center rounded px-1.5 text-sky-400 hover:text-sky-300 transition-colors'
-                : 'text-sky-400 hover:text-sky-300 underline underline-offset-2'
+                ? 'inline-flex items-center justify-center rounded px-1.5 text-sky-600 hover:text-sky-700 transition-colors'
+                : 'text-sky-600 hover:text-sky-700 underline underline-offset-2'
             }
             title={labelText || '跳转到补丁'}
             aria-label={labelText || '跳转到补丁'}
@@ -397,7 +433,7 @@ export default function NewsDashboard({
       return (
         <a
           href={href}
-          className="text-sky-400 hover:text-sky-300 underline underline-offset-2"
+          className="text-sky-600 hover:text-sky-700 underline underline-offset-2"
           {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         >
           {children}
@@ -408,24 +444,24 @@ export default function NewsDashboard({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-400">加载中...</p>
+          <p className="text-slate-500">加载中...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <select
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
               style={{ minWidth: '100px' }}
             >
               <option value="all">全部分类</option>
@@ -438,7 +474,7 @@ export default function NewsDashboard({
             <select
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
               style={{ minWidth: '140px' }}
             >
               {availableDates.map(date => (
@@ -447,19 +483,19 @@ export default function NewsDashboard({
                 </option>
               ))}
             </select>
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-gray-100">
+            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
               <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
-              <span>Linux Kernel 补丁日报</span>
+              <span>Linux Kernel动态</span>
             </h1>
           </div>
-          <span className="text-sm text-gray-400">共 {articles.length} 篇</span>
+          <span className="text-sm text-slate-500">共 {articles.length} 篇</span>
         </div>
 
         {selectedCategory !== 'all' && summary && (
-          <div className="bg-gray-900/70 rounded-xl p-4 mb-6 border border-gray-800">
+          <div className="bg-white rounded-xl p-4 mb-6 border border-slate-200 shadow-sm">
             <div className="flex items-start gap-3">
               <span className="text-2xl flex-shrink-0">💡</span>
-              <div className="flex-1 prose prose-invert prose-sm max-w-none">
+              <div className="flex-1 prose prose-sm max-w-none">
                 <ReactMarkdown components={categorySummaryComponents}>{summary}</ReactMarkdown>
               </div>
             </div>
@@ -469,17 +505,17 @@ export default function NewsDashboard({
         {Object.keys(groupedArticles).length === 0 ? (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">📭</div>
-            <h3 className="text-base font-medium text-gray-300 mb-2">暂无内容</h3>
-            <p className="text-sm text-gray-500">该分类或日期还没有抓取信息</p>
+            <h3 className="text-base font-medium text-slate-700 mb-2">暂无内容</h3>
+            <p className="text-sm text-slate-500">该分类或日期还没有抓取信息</p>
           </div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedArticles).map(([category, categoryArticles]) => (
               <div key={category}>
-                <h2 className="text-base font-semibold text-gray-300 flex items-center gap-2 mb-3">
+                <h2 className="text-base font-semibold text-slate-700 flex items-center gap-2 mb-3">
                   <span>{categoryEmoji[category] || '📄'}</span>
                   <span>{category}</span>
-                  <span className="text-xs text-gray-500 font-normal">({categoryArticles.length})</span>
+                  <span className="text-xs text-slate-400 font-normal">({categoryArticles.length})</span>
                 </h2>
                 {category === 'linux kernel' && <LkmlTypeStatsBar articles={categoryArticles} />}
                 {category === 'linux kernel' ? (

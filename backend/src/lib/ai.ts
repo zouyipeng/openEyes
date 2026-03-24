@@ -152,12 +152,34 @@ function normalizeParagraphToBullets(text: string): string {
   return normalized.map(p => `- ${p}`).join('\n')
 }
 
-function linuxOverviewHeadingWithModel(): string {
-  const model = config.openai.model?.trim() || 'unknown'
-  return `### 今日社区动态（${model}）`
+function computeArticleDateRange(articles: Article[]): string {
+  let minTs = Number.POSITIVE_INFINITY
+  let maxTs = Number.NEGATIVE_INFINITY
+  for (const a of articles) {
+    const raw = a.patchData?.date || a.fetchedAt
+    if (!raw) continue
+    const ts = new Date(raw).getTime()
+    if (Number.isNaN(ts)) continue
+    if (ts < minTs) minTs = ts
+    if (ts > maxTs) maxTs = ts
+  }
+  if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) return ''
+  const fmt = (ts: number) =>
+    new Date(ts)
+      .toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+      .replace(/\//g, '-')
+      .replace(/\s/g, '')
+  return `${fmt(minTs)} ~ ${fmt(maxTs)}`
 }
 
-function normalizeCategorySummary(content: string, category?: string): string {
+function linuxOverviewHeadingWithModel(dateRange?: string): string {
+  const model = config.openai.model?.trim() || 'unknown'
+  return dateRange
+    ? `### 今日社区动态（${model}｜${dateRange}）`
+    : `### 今日社区动态（${model}）`
+}
+
+function normalizeCategorySummary(content: string, category?: string, dateRange?: string): string {
   const cleaned = cleanAIResponse(content)
   if (!cleaned) return ''
 
@@ -166,11 +188,12 @@ function normalizeCategorySummary(content: string, category?: string): string {
       (cleaned.includes('今日补丁概览') || cleaned.includes('今日社区动态')) &&
       cleaned.includes('总体评价')
     if (hasOverallSections) {
-      const blockAfterOverview = cleaned.split(/#{1,6}\s*(今日补丁概览|今日社区动态)\s*/)[2] || ''
+      const blockAfterOverview =
+        cleaned.split(/#{1,6}\s*(今日补丁概览|今日社区动态)(?:（[^\n）]+）)?\s*/)[2] || ''
       const overviewPart = blockAfterOverview.split(/#{1,6}\s*总体评价\s*/)[0]?.trim() || ''
       const reviewPart = cleaned.split(/#{1,6}\s*总体评价\s*/)[1]?.trim() || ''
       return [
-        linuxOverviewHeadingWithModel(),
+        linuxOverviewHeadingWithModel(dateRange),
         normalizeParagraphToBullets(overviewPart || '今日补丁覆盖多个子系统，以修复与维护为主。'),
         '',
         '### 总体评价',
@@ -192,7 +215,7 @@ function normalizeCategorySummary(content: string, category?: string): string {
     const overview = lines.slice(0, 5).join(' ')
     const review = lines.slice(5).join(' ')
     return [
-      linuxOverviewHeadingWithModel(),
+      linuxOverviewHeadingWithModel(dateRange),
       normalizeParagraphToBullets(overview || '今日补丁覆盖多个子系统，以修复与维护为主。'),
       '',
       '### 总体评价',
@@ -312,7 +335,7 @@ export function linkifyLinuxKernelPrimaryPatches(markdown: string, articles: Art
   return markdown.slice(0, idx + marker.length) + outLines.join('\n') + tail
 }
 
-function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): string {
+function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[], dateRange?: string): string {
   if (articles.length === 0) return markdown
   if (!markdown.includes('### 今日补丁概览') && !markdown.includes('### 今日社区动态')) return markdown
 
@@ -340,6 +363,7 @@ function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): s
     .split('\n')
     .map(line => line.trimEnd())
     .filter(Boolean)
+    .filter(line => !/^（[^）]+）$/.test(line.trim()))
   const parentBulletIdx: number[] = []
   overviewLines.forEach((line, idx) => {
     if (/^- /.test(line)) {
@@ -400,7 +424,7 @@ function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): s
     }
   }
 
-  return `${afterOverview[0]}${linuxOverviewHeadingWithModel()}\n${outLines.join('\n')}\n${tail}`
+  return `${afterOverview[0]}${linuxOverviewHeadingWithModel(dateRange)}\n${outLines.join('\n')}\n${tail}`
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -505,9 +529,10 @@ export async function generateCategorySummary(
     }, `生成分类摘要: ${category}`)
 
     const rawContent = result.choices[0]?.message?.content || ''
-    let normalized = normalizeCategorySummary(rawContent, category)
+    const dateRange = category === 'linux kernel' ? computeArticleDateRange(articles) : ''
+    let normalized = normalizeCategorySummary(rawContent, category, dateRange)
     if (category === 'linux kernel' && articles.length > 0) {
-      normalized = appendLinuxKernelFeatureLinks(normalized, articles)
+      normalized = appendLinuxKernelFeatureLinks(normalized, articles, dateRange)
       if (normalized.includes('### 重点补丁')) {
         normalized = linkifyLinuxKernelPrimaryPatches(normalized, articles)
       }
