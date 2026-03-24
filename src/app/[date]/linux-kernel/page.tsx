@@ -28,5 +28,5 @@ export default function LinuxKernelByDatePage({
 }: {
   params: { date: string }
 }) {
-  return <NewsDashboard initialCategory="linux kernel" initialDate={params.date} />
+  return <NewsDashboard initialDate={params.date} />
 }
