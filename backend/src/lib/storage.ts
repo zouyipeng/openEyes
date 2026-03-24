@@ -15,6 +15,8 @@ export interface Source {
   config?: string
   aiPrompt?: string
   excludeAuthors?: string[]
+  lkmlDetailConcurrency?: number
+  lkmlDetailTimeoutMs?: number
 }
 
 export interface CategoryPrompt {

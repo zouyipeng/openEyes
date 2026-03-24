@@ -13,6 +13,44 @@ body {
   color: #f3f4f6;
 }
 
+@keyframes lkmlFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lkml-fade-in {
+  animation: lkmlFadeIn 240ms ease-out;
+}
+
+.lkml-collapse-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 300ms ease, opacity 220ms ease;
+}
+
+.lkml-collapse-content.is-open {
+  max-height: 2200px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lkml-fade-in {
+    animation: none;
+  }
+
+  .lkml-collapse-content,
+  .lkml-collapse-content.is-open {
+    transition: none;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

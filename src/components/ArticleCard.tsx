@@ -22,7 +22,18 @@ export default function ArticleCard({ article }: ArticleCardProps) {
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
       <div className="flex-1 min-w-0">
         <h3 className="text-base font-medium text-gray-100 mb-2 leading-relaxed">
-          {article.title}
+          {article.url ? (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-300 transition-colors"
+            >
+              {article.title}
+            </a>
+          ) : (
+            article.title
+          )}
         </h3>
         <div className="text-sm text-gray-400 leading-relaxed mb-3 prose prose-invert prose-sm max-w-none">
           <ReactMarkdown
@@ -49,18 +60,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-gray-500">📌</span>
-          {article.url ? (
-            <a 
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              {article.sourceName}
-            </a>
-          ) : (
-            <span className="text-gray-500">{article.sourceName}</span>
-          )}
+          <span className="text-gray-500">{article.sourceName}</span>
         </div>
       </div>
     </div>

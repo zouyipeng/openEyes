@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import fs from 'fs'
 import path from 'path'
-import { Article, GlobalConfig } from './storage'
+import { Article, GlobalConfig, loadGlobalConfig } from './storage'
 
 const configPath = path.join(__dirname, '../../config.json')
 let config = {
@@ -73,6 +74,328 @@ function cleanAIResponse(content: string): string {
   return cleaned
 }
 
+/** 将「子系统动态」里的 Markdown 表格转为每条独立一行的列表，便于前端展示 */
+function normalizeSubsystemDynamicsSection(text: string): string {
+  const marker = '### 子系统动态'
+  const idx = text.indexOf(marker)
+  if (idx < 0) return text
+
+  const head = text.slice(0, idx + marker.length)
+  let rest = text.slice(idx + marker.length)
+  const nextSection = rest.search(/\n### [^#]/)
+  let sectionBody: string
+  let tail: string
+  if (nextSection >= 0) {
+    sectionBody = rest.slice(0, nextSection).trim()
+    tail = rest.slice(nextSection)
+  } else {
+    sectionBody = rest.trim()
+    tail = ''
+  }
+
+  if (!sectionBody.includes('|')) {
+    return text
+  }
+
+  const lines = sectionBody.split('\n').map(l => l.trim()).filter(Boolean)
+  const bullets: string[] = []
+  for (const line of lines) {
+    if (!line.includes('|')) continue
+    const cells = line
+      .split('|')
+      .map(c => c.trim())
+      .filter(c => c.length > 0)
+    if (cells.length < 2) continue
+    const rowText = cells.join('')
+    if (/^[-:\s|]+$/.test(rowText)) continue
+    const [a, b, ...restCells] = cells
+    if (a === '子系统' && (b === '变化' || b?.includes('变化'))) continue
+    const right = [b, ...restCells].filter(Boolean).join('；')
+    const left = a.replace(/\*\*/g, '').trim()
+    if (left && right) {
+      bullets.push(`- **${left}**：${right}`)
+    }
+  }
+
+  if (bullets.length === 0) {
+    return text
+  }
+
+  const newSection = `\n\n${bullets.join('\n')}\n`
+  return head + newSection + tail
+}
+
+function normalizeParagraphToBullets(text: string): string {
+  const cleaned = text.trim()
+  if (!cleaned) return '- 暂无内容'
+
+  const existingBullets = cleaned
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.startsWith('- '))
+  if (existingBullets.length >= 2) {
+    return existingBullets.join('\n')
+  }
+
+  const roughParts = cleaned
+    .replace(/\r/g, '')
+    .split(/\n+|(?<=[。！？；;])\s+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+
+  const normalized = roughParts
+    .map(p => p.replace(/^[-*]\s*/, '').trim())
+    .filter(p => p.length > 0)
+    .slice(0, 10)
+
+  if (normalized.length === 0) return '- 暂无内容'
+  return normalized.map(p => `- ${p}`).join('\n')
+}
+
+function normalizeCategorySummary(content: string, category?: string): string {
+  const cleaned = cleanAIResponse(content)
+  if (!cleaned) return ''
+
+  if (category === 'linux kernel') {
+    const hasOverallSections = cleaned.includes('今日补丁概览') && cleaned.includes('总体评价')
+    if (hasOverallSections) {
+      const blockAfterOverview = cleaned.split(/#{1,6}\s*今日补丁概览\s*/)[1] || ''
+      const overviewPart = blockAfterOverview.split(/#{1,6}\s*总体评价\s*/)[0]?.trim() || ''
+      const reviewPart = cleaned.split(/#{1,6}\s*总体评价\s*/)[1]?.trim() || ''
+      return [
+        '### 今日补丁概览',
+        normalizeParagraphToBullets(overviewPart || '今日补丁覆盖多个子系统，以修复与维护为主。'),
+        '',
+        '### 总体评价',
+        normalizeParagraphToBullets(reviewPart || '整体改动风险可控，建议重点关注跨子系统依赖与回归验证。'),
+      ].join('\n')
+    }
+
+    // 兼容旧结构：若模型仍输出「重点补丁/子系统动态」，保持原样（不再强制依赖）
+    const hasLegacySections =
+      cleaned.includes('### 重点补丁') && cleaned.includes('### 子系统动态')
+    if (hasLegacySections) {
+      return normalizeSubsystemDynamicsSection(cleaned)
+    }
+
+    const lines = cleaned
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+    const overview = lines.slice(0, 5).join(' ')
+    const review = lines.slice(5).join(' ')
+    return [
+      '### 今日补丁概览',
+      normalizeParagraphToBullets(overview || '今日补丁覆盖多个子系统，以修复与维护为主。'),
+      '',
+      '### 总体评价',
+      normalizeParagraphToBullets(review || '整体改动风险可控，建议重点关注跨子系统依赖与回归验证。'),
+    ].join('\n')
+  }
+
+  let result: string
+  const hasKeySections =
+    cleaned.includes('### 重点补丁') && cleaned.includes('### 子系统动态')
+  if (hasKeySections) {
+    result = cleaned
+  } else {
+    const lines = cleaned
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+
+    const bullets = lines.map(line => (line.startsWith('- ') ? line : `- ${line}`))
+    const primary = bullets.slice(0, 3)
+    const secondary = bullets.slice(3)
+
+    result = [
+      '### 重点补丁',
+      primary.length > 0 ? primary.join('\n') : '- 暂无重点补丁',
+      '',
+      '### 子系统动态',
+      secondary.length > 0 ? secondary.join('\n') : '- 暂无子系统变化',
+    ].join('\n')
+  }
+
+  return normalizeSubsystemDynamicsSection(result)
+}
+
+/** 与前端 `lkmlAnchorId` 规则一致，用于分类摘要中的 #fragment */
+export function lkmlAnchorFragmentId(articleId: string): string {
+  return `lkml-${articleId.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+}
+
+function normalizeTitleForMatch(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\[[^\]]*\]\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function scoreTitleMatch(bulletNorm: string, titleNorm: string): number {
+  if (!bulletNorm || !titleNorm) return 0
+  const maxLen = Math.min(120, bulletNorm.length, titleNorm.length)
+  let prefix = 0
+  for (let i = 0; i < maxLen && bulletNorm[i] === titleNorm[i]; i++) prefix++
+  if (titleNorm.includes(bulletNorm)) return Math.max(bulletNorm.length, prefix)
+  if (bulletNorm.includes(titleNorm)) return Math.max(titleNorm.length, prefix)
+  return prefix
+}
+
+function escapeMarkdownLinkLabel(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\]/g, '\\]').replace(/\[/g, '\\[')
+}
+
+/** 将「重点补丁」下的列表项改为指向下方补丁卡片的 Markdown 锚点链接 */
+export function linkifyLinuxKernelPrimaryPatches(markdown: string, articles: Article[]): string {
+  const marker = '### 重点补丁'
+  const idx = markdown.indexOf(marker)
+  if (idx < 0 || articles.length === 0) return markdown
+
+  const afterMarker = markdown.slice(idx + marker.length)
+  const nextH = afterMarker.search(/\n### [^#]/)
+  const sectionBody = nextH >= 0 ? afterMarker.slice(0, nextH) : afterMarker
+  const tail = nextH >= 0 ? afterMarker.slice(nextH) : ''
+
+  const candidates = articles.map(a => ({
+    id: a.id,
+    norm: normalizeTitleForMatch(a.title),
+  }))
+  const used = new Set<string>()
+  let fallbackIndex = 0
+
+  const lines = sectionBody.split('\n')
+  const outLines = lines.map(line => {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('-')) return line
+
+    const raw = trimmed.replace(/^-\s+/, '').trim()
+    if (/^\[.*\]\(#lkml-/.test(raw) || raw.includes('](#lkml-')) {
+      return line
+    }
+
+    const plainForMatch = raw
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/^([^：:]+)[：:]\s+/, '')
+      .trim()
+    const bulletNorm = normalizeTitleForMatch(plainForMatch.length >= 8 ? plainForMatch : raw)
+
+    let best: { id: string; score: number } | null = null
+    for (const c of candidates) {
+      if (used.has(c.id)) continue
+      const s = scoreTitleMatch(bulletNorm, c.norm)
+      if (!best || s > best.score) best = { id: c.id, score: s }
+    }
+
+    if (!best || best.score < 12) {
+      while (fallbackIndex < candidates.length && used.has(candidates[fallbackIndex].id)) {
+        fallbackIndex++
+      }
+      if (fallbackIndex >= candidates.length) return line
+      best = { id: candidates[fallbackIndex].id, score: 0 }
+      fallbackIndex++
+    }
+
+    const frag = lkmlAnchorFragmentId(best.id)
+    used.add(best.id)
+    return `- [${escapeMarkdownLinkLabel(raw)}](#${frag})`
+  })
+
+  return markdown.slice(0, idx + marker.length) + outLines.join('\n') + tail
+}
+
+function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): string {
+  if (articles.length === 0) return markdown
+  if (!markdown.includes('### 今日补丁概览')) return markdown
+
+  const featureArticles = articles
+    .filter(a => a.patchData?.type === 'feature')
+    .slice(0, 6)
+
+  if (featureArticles.length === 0) return markdown
+
+  const afterOverview = markdown.split(/#{1,6}\s*今日补丁概览\s*/)
+  if (afterOverview.length < 2) return markdown
+
+  const overviewAndTail = afterOverview[1]
+  const reviewMatch = overviewAndTail.match(/\n#{1,6}\s*总体评价\s*/)
+  if (!reviewMatch || reviewMatch.index === undefined) {
+    return markdown
+  }
+
+  const splitAt = reviewMatch.index
+  const overviewBody = overviewAndTail.slice(0, splitAt)
+  const tail = overviewAndTail.slice(splitAt)
+  if (overviewBody.includes('](#lkml-')) return markdown
+
+  const overviewLines = overviewBody
+    .split('\n')
+    .map(line => line.trimEnd())
+    .filter(Boolean)
+  const parentBulletIdx: number[] = []
+  overviewLines.forEach((line, idx) => {
+    if (/^- /.test(line)) {
+      parentBulletIdx.push(idx)
+    }
+  })
+  if (parentBulletIdx.length === 0) return markdown
+
+  const scoreLineForFeature = (line: string, title: string): number => {
+    const lowerLine = line.toLowerCase()
+    const lowerTitle = title.toLowerCase()
+    let score = 0
+    const rules: Array<{ line: RegExp; title: RegExp }> = [
+      { line: /(网络|net|ethernet|switch|虚拟化)/i, title: /(net|ethernet|switch|nic|tcp|udp|ovs|openvswitch|qede|bnxt|mana)/i },
+      { line: /(驱动|硬件|外设|平台|i2c|adc|hwmon|音频|soundwire)/i, title: /(driver|i2c|adc|hwmon|sound|audio|codec|pcie|phy|sensor|platform)/i },
+      { line: /(图形|显示|多媒体|drm|gpu|camera)/i, title: /(drm|gpu|display|camera|media|panthor|msm)/i },
+      { line: /(文件系统|存储|fs|ext4|f2fs|btrfs|ntfs|xfs)/i, title: /(fs|ext4|f2fs|btrfs|ntfs|xfs|erofs|storage)/i },
+      { line: /(架构|risc|arm|loongarch)/i, title: /(risc|arm|loongarch|arch|dts)/i },
+      { line: /(新特性|新增|支持|生态|趋势|总体)/i, title: /(add|support|enable|new|introduce|feature)/i },
+    ]
+    for (const r of rules) {
+      if (r.line.test(lowerLine) && r.title.test(lowerTitle)) {
+        score += 3
+      }
+    }
+    const titleTokens = lowerTitle.split(/[^a-z0-9]+/).filter(t => t.length >= 3).slice(0, 8)
+    for (const token of titleTokens) {
+      if (lowerLine.includes(token)) score += 1
+    }
+    return score
+  }
+
+  const linksByParent = new Map<number, string[]>()
+  for (const a of featureArticles) {
+    const link = `[${escapeMarkdownLinkLabel(a.title)}](#${lkmlAnchorFragmentId(a.id)})`
+    let bestParent = parentBulletIdx[parentBulletIdx.length - 1]
+    let bestScore = -1
+    for (const idx of parentBulletIdx) {
+      const s = scoreLineForFeature(overviewLines[idx], a.title)
+      if (s > bestScore) {
+        bestScore = s
+        bestParent = idx
+      }
+    }
+    const arr = linksByParent.get(bestParent) || []
+    arr.push(link)
+    linksByParent.set(bestParent, arr)
+  }
+
+  const outLines: string[] = []
+  for (let i = 0; i < overviewLines.length; i++) {
+    const links = linksByParent.get(i)
+    if (links && links.length > 0) {
+      const inlineLinks = links.slice(0, 4).join(' ')
+      outLines.push(`${overviewLines[i]} ${inlineLinks}`)
+    } else {
+      outLines.push(overviewLines[i])
+    }
+  }
+
+  return `${afterOverview[0]}### 今日补丁概览\n${outLines.join('\n')}\n${tail}`
+}
+
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -117,133 +440,8 @@ function getCategoryContext(category: string): { messages: { role: string; conte
   return categoryContextCache.get(category)!
 }
 
-export function clearCategoryContext(category: string): void {
-  categoryContextCache.delete(category)
-}
-
 export function clearAllCategoryContexts(): void {
   categoryContextCache.clear()
-}
-
-export async function summarizeContent(
-  title: string,
-  content: string,
-  customPrompt?: string
-): Promise<string> {
-  if (!config.openai.apiKey) {
-    console.log('[AI] summarizeContent - API Key 未配置，跳过')
-    return content.substring(0, 100) + '...'
-  }
-
-  const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...' : content
-  
-  const defaultPrompt = '你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。直接输出总结内容，不要添加标题或额外格式。不要输出思考过程。'
-  const systemPrompt = customPrompt || defaultPrompt
-  
-  try {
-    const result = await withRetry(async () => {
-      return await openai.chat.completions.create({
-        model: config.openai.model,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: `标题：${title}\n\n内容：${truncatedContent}`
-          }
-        ],
-        max_tokens: config.openai.maxTokens,
-        temperature: 0.7,
-      })
-    }, `总结文章: ${title.substring(0, 30)}...`)
-
-    const rawContent = result.choices[0]?.message?.content || ''
-    console.log('[AI] 原始响应长度:', rawContent.length)
-    const cleaned = cleanAIResponse(rawContent)
-    console.log('[AI] 清理后长度:', cleaned.length)
-    return cleaned || truncatedContent.substring(0, 100) + '...'
-  } catch (error: any) {
-    console.error('[AI] summarizeContent - 最终失败:', error.message)
-    return truncatedContent.substring(0, 100) + '...'
-  }
-}
-
-export async function summarizeArticlesInCategory(
-  articles: Article[],
-  category: string,
-  globalConfig: GlobalConfig,
-  sourcePrompts: Map<string, string>
-): Promise<void> {
-  if (!config.openai.apiKey) {
-    console.log('[AI] summarizeArticlesInCategory - API Key 未配置，跳过')
-    return
-  }
-
-  const context = getCategoryContext(category)
-  
-  const categoryPrompt = globalConfig.categoryPrompts?.[category]?.summaryPrompt
-  
-  for (const article of articles) {
-    if (article.patchData?.summary && article.patchData.summary.length > 10) {
-      console.log(`[AI] 分类 ${category} - 跳过已总结patch: ${article.title.substring(0, 30)}...`)
-      context.messages.push(
-        { role: 'user', content: `标题：${article.title}` },
-        { role: 'assistant', content: article.patchData.summary }
-      )
-      continue
-    }
-    
-    if (article.summary && article.summary.length > 20 && !article.summary.endsWith('...')) {
-      console.log(`[AI] 分类 ${category} - 跳过已总结: ${article.title.substring(0, 30)}...`)
-      context.messages.push(
-        { role: 'user', content: `标题：${article.title}` },
-        { role: 'assistant', content: article.summary }
-      )
-      continue
-    }
-    
-    const prompt = sourcePrompts.get(article.sourceId) 
-      || categoryPrompt 
-      || globalConfig.defaultSummaryPrompt
-    
-    try {
-      const truncatedContent = (article.content || article.title).length > 2000 
-        ? (article.content || article.title).substring(0, 2000) + '...' 
-        : (article.content || article.title)
-      
-      const messages: { role: string; content: string }[] = [
-        { role: 'system', content: prompt },
-        ...context.messages.slice(-4),
-        { role: 'user', content: `标题：${article.title}\n\n内容：${truncatedContent}` }
-      ]
-      
-      const result = await withRetry(async () => {
-        return await openai.chat.completions.create({
-          model: config.openai.model,
-          messages,
-          max_tokens: config.openai.maxTokens,
-          temperature: 0.7,
-        })
-      }, `总结文章: ${article.title.substring(0, 30)}...`)
-
-      const rawContent = result.choices[0]?.message?.content || ''
-      const cleaned = cleanAIResponse(rawContent)
-      
-      article.summary = cleaned || article.title.substring(0, 100) + '...'
-      
-      context.messages.push(
-        { role: 'user', content: `标题：${article.title}` },
-        { role: 'assistant', content: article.summary }
-      )
-      
-      console.log(`[AI] 分类 ${category} - 已总结文章: ${article.title.substring(0, 30)}...`)
-    } catch (error: any) {
-      console.error(`[AI] 总结文章失败: ${article.title}`, error.message)
-      article.summary = article.title.substring(0, 100) + '...'
-    }
-  }
 }
 
 export async function generateCategorySummary(
@@ -269,15 +467,25 @@ export async function generateCategorySummary(
   const prompt = categoryPrompt || globalConfig.defaultCategorySummaryPrompt
 
   try {
+    const maxArticlesForSummary = category === 'linux kernel' ? 120 : 40
     const articlesText = articles
-      .slice(0, 20)
+      .slice(0, maxArticlesForSummary)
       .map(a => `【${a.sourceName}】${a.title}${a.summary ? ': ' + a.summary.substring(0, 100) : ''}`)
       .join('\n\n')
 
-    const messages: { role: string; content: string }[] = [
+    const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: prompt },
-      ...context.messages.slice(-6),
-      { role: 'user', content: `请为以下${category}分类的文章生成摘要：\n${articlesText}` }
+      ...context.messages.slice(-6).map(m => ({
+        role: m.role as 'system' | 'user' | 'assistant',
+        content: m.content,
+      })),
+      {
+        role: 'user',
+        content: `请为以下${category}分类的文章生成摘要。\n总文章数：${totalArticles}\n本次提供样本数：${Math.min(
+          totalArticles,
+          maxArticlesForSummary
+        )}\n请在总结中体现“总量”和“整体趋势”，不要误写成仅有样本数。\n\n${articlesText}`,
+      }
     ]
 
     const result = await withRetry(async () => {
@@ -290,217 +498,65 @@ export async function generateCategorySummary(
     }, `生成分类摘要: ${category}`)
 
     const rawContent = result.choices[0]?.message?.content || ''
-    const cleaned = cleanAIResponse(rawContent)
-    return cleaned || `今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。`
+    let normalized = normalizeCategorySummary(rawContent, category)
+    if (category === 'linux kernel' && articles.length > 0) {
+      normalized = appendLinuxKernelFeatureLinks(normalized, articles)
+      if (normalized.includes('### 重点补丁')) {
+        normalized = linkifyLinuxKernelPrimaryPatches(normalized, articles)
+      }
+    }
+    return normalized || `今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。`
   } catch (error: any) {
     console.error('[AI] generateCategorySummary - 最终失败:', error.message)
     return `今日共收集到${totalArticles}篇文章，来自${sourceCount}个信息源。`
   }
 }
 
-export async function extractKeywords(title: string, content: string): Promise<string[]> {
-  if (!config.openai.apiKey) {
-    console.log('[AI] extractKeywords - API Key 未配置，跳过')
-    return []
-  }
-
-  const truncatedContent = content.length > 1000 ? content.substring(0, 1000) : content
-
-  try {
-    const result = await withRetry(async () => {
-      return await openai.chat.completions.create({
-        model: config.openai.model,
-        messages: [
-          {
-            role: 'system',
-            content: '请从以下文章中提取3-5个关键词，只返回关键词，用逗号分隔。不要输出思考过程。'
-          },
-          {
-            role: 'user',
-            content: `标题：${title}\n\n内容：${truncatedContent}`
-          }
-        ],
-        max_tokens: config.openai.maxTokens,
-        temperature: 0.5,
-      })
-    }, `提取关键词: ${title.substring(0, 20)}...`)
-
-    const rawContent = result.choices[0]?.message?.content || ''
-    const cleanedContent = cleanAIResponse(rawContent)
-    const keywords = cleanedContent.split(/[,，]/).map(k => k.trim())
-    return keywords.filter(k => k.length > 0)
-  } catch (error: any) {
-    console.error('[AI] extractKeywords - 最终失败:', error.message)
-    return []
-  }
-}
-
-export function isAIConfigured(): boolean {
-  return !!config.openai.apiKey
-}
-
-export function getAIConfig() {
-  return {
-    configured: !!config.openai.apiKey,
-    baseURL: config.openai.baseURL,
-    model: config.openai.model,
-    maxTokens: config.openai.maxTokens
-  }
-}
-
-export async function analyzePatch(title: string, content: string, customPrompt?: string): Promise<{
-  type: 'feature' | 'bugfix' | 'other'
-  subsystem: 'sched' | 'mm' | 'fs' | 'net' | 'driver' | 'security' | 'arch' | 'other'
-  highlight: boolean
-  summary: string
-}> {
-  const defaultResult = {
-    type: 'other' as const,
-    subsystem: 'other' as const,
-    highlight: false,
-    summary: title.replace(/^\[[^\]]+\]\s*/, '').substring(0, 50)
-  }
-
-  if (!config.openai.apiKey) {
-    console.log('[AI] analyzePatch - API Key 未配置，使用默认结果')
-    return defaultResult
-  }
-
-  const patchTitle = title.replace(/^LKML:\s*[^:]+:\s*/i, '').replace(/^\[[^\]]+\]\s*/, '')
-  
-  try {
-    const result = await withRetry(async () => {
-      return await openai.chat.completions.create({
-        model: config.openai.model,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个Linux内核开发专家。请根据补丁标题分析补丁信息。直接回答问题，不要输出思考过程。分析时要深入理解补丁的技术本质，提炼出核心改进点。'
-          },
-          {
-            role: 'user',
-            content: `补丁标题：${patchTitle}
-
-请回答以下问题，每行一个答案：
-1. 补丁类型（只回答：feature、bugfix 或 other）
-2. 子系统（只回答：sched、mm、fs、net、driver、security、arch 或 other）
-3. 是否重要（只回答：是 或 否）
-4. 用一句话描述这个补丁的核心功能改进（20字以内，必须是有意义的描述，不能只是重复标题或文件名。要提炼出补丁的本质改进，例如：优化了XX性能、修复了XX条件下的崩溃、增加了XX新特性支持等）`
-          }
-        ],
-        max_tokens: 150,
-        temperature: 0.3,
-      })
-    }, `分析补丁: ${patchTitle.substring(0, 30)}...`)
-
-    const rawContent = result.choices[0]?.message?.content || ''
-    const cleaned = cleanAIResponse(rawContent)
-    
-    const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l)
-    
-    let type: 'feature' | 'bugfix' | 'other' = 'other'
-    const typeLine = lines[0] || ''
-    if (typeLine.toLowerCase().includes('feature')) {
-      type = 'feature'
-    } else if (typeLine.toLowerCase().includes('bugfix') || typeLine.toLowerCase().includes('bug')) {
-      type = 'bugfix'
-    }
-    console.log(`[AI] 补丁类型: ${type}`)
-
-    let subsystem: 'sched' | 'mm' | 'fs' | 'net' | 'driver' | 'security' | 'arch' | 'other' = 'other'
-    const subsystemLine = lines[1] || ''
-    const subsystemMap: Record<string, typeof subsystem> = {
-      'sched': 'sched', '调度': 'sched', 'scheduler': 'sched',
-      'mm': 'mm', '内存': 'mm', 'memory': 'mm',
-      'fs': 'fs', '文件': 'fs', 'filesystem': 'fs',
-      'net': 'net', '网络': 'net', 'network': 'net',
-      'driver': 'driver', '驱动': 'driver',
-      'security': 'security', '安全': 'security',
-      'arch': 'arch', '架构': 'arch', 'architecture': 'arch'
-    }
-    for (const [key, value] of Object.entries(subsystemMap)) {
-      if (subsystemLine.toLowerCase().includes(key)) {
-        subsystem = value
-        break
-      }
-    }
-    console.log(`[AI] 子系统: ${subsystem}`)
-
-    const highlightLine = lines[2] || ''
-    const highlight = highlightLine.includes('是') || highlightLine.toLowerCase().includes('yes')
-    console.log(`[AI] 是否重点: ${highlight}`)
-
-    let summary = lines[3] || ''
-    if (!summary || summary.length < 5 || summary.toLowerCase().includes('convert') && summary.length < 30) {
-      const patchTitleLower = patchTitle.toLowerCase()
-      if (patchTitleLower.includes('fix') || patchTitleLower.includes('bug')) {
-        summary = '修复了内核中的一个问题'
-      } else if (patchTitleLower.includes('add') || patchTitleLower.includes('support')) {
-        summary = '添加了新功能或支持'
-      } else if (patchTitleLower.includes('remove') || patchTitleLower.includes('delete')) {
-        summary = '移除了过时或冗余的代码'
-      } else if (patchTitleLower.includes('update') || patchTitleLower.includes('improve')) {
-        summary = '更新或改进了现有功能'
-      } else if (patchTitleLower.includes('convert')) {
-        summary = '将代码或文档转换为新的格式'
-      } else if (patchTitleLower.includes('replace')) {
-        summary = '替换了旧的实现方式'
-      } else if (patchTitleLower.includes('clean') || patchTitleLower.includes('refactor')) {
-        summary = '代码清理或重构'
-      } else {
-        summary = patchTitle.replace(/^\[[^\]]+\]\s*/, '').substring(0, 40)
-      }
-    }
-    console.log(`[AI] 摘要: ${summary}`)
-
-    return { type, subsystem, highlight, summary }
-  } catch (error: any) {
-    console.error('[AI] analyzePatch - 失败:', error.message)
-    return defaultResult
-  }
-}
-
-export async function summarizePatchDiscussion(
-  patchTitle: string,
-  patchContent: string,
-  replies: { author: string; content: string }[]
+export async function generateDailySummary(
+  articles: { title: string; content?: string; sourceName: string }[]
 ): Promise<string> {
-  if (!config.openai.apiKey) {
-    console.log('[AI] summarizePatchDiscussion - API Key 未配置，跳过')
-    return ''
-  }
+  const normalizedArticles: Article[] = articles.map((article, index) => ({
+    id: `summary_${index}`,
+    sourceId: article.sourceName,
+    sourceName: article.sourceName,
+    title: article.title,
+    content: article.content,
+    fetchedAt: new Date().toISOString(),
+  }))
 
-  if (replies.length === 0) {
-    return ''
-  }
-
-  const repliesText = replies
-    .map(r => `【${r.author}】${r.content.substring(0, 300)}`)
-    .join('\n\n')
-
-  try {
-    const result = await withRetry(async () => {
-      return await openai.chat.completions.create({
-        model: config.openai.model,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个Linux内核开发专家。请总结以下补丁讨论的核心观点和结论。\n\n要求：\n1. 用中文回复\n2. 控制在150字以内\n3. 突出讨论的焦点和结论\n4. 不要输出思考过程'
-          },
-          {
-            role: 'user',
-            content: `原始补丁：${patchTitle}\n\n讨论内容：\n${repliesText}`
-          }
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
-      })
-    }, `总结讨论: ${patchTitle.substring(0, 20)}...`)
-
-    const rawContent = result.choices[0]?.message?.content || ''
-    return cleanAIResponse(rawContent)
-  } catch (error: any) {
-    console.error('[AI] summarizePatchDiscussion - 最终失败:', error.message)
-    return ''
-  }
+  const globalConfig = loadGlobalConfig()
+  return generateCategorySummary(normalizedArticles, 'daily', globalConfig)
 }
+
+/**
+ * 根据补丁主题行与正文（含 commit message）用规则推断类型，不调用 AI。
+ * `title` 建议为原始主题（可含 `[PATCH]`），或至少保留 `子系统: 动词 ...` 段。
+ */
+export function inferPatchTypeRuleBased(title: string, body: string): 'feature' | 'bugfix' | 'other' {
+  const combined = `${title}\n${body}`
+  const lower = combined.toLowerCase()
+
+  const bugfixInSubject =
+    /\[patch[^\]]*\]\s*[^:]+:\s*(fix|fixes)\b/i.test(title) ||
+    /^[^:]+:\s*(fix|fixes)\b/i.test(title.trim())
+  const bugfixInText =
+    /\b(fix(es|ed|ing)?|fixes:)\b/.test(lower) ||
+    /\b(data\s+race|race\s+condition|kcsan)\b/.test(lower) ||
+    /\b(leak|memory\s+leak|refcount)\b/.test(lower) ||
+    /\b(crash|oops|panic|null\s*deref|null\s*pointer|use[-\s]after[-\s]free|\buaf\b)\b/.test(lower) ||
+    /\b(overflow|underflow|deadlock|hang)\b/.test(lower) ||
+    /\b(syzbot|regression)\b/.test(lower)
+
+  const featureInSubject =
+    /\[patch[^\]]*\]\s*[^:]+:\s*(add|adds|implement|introduce|support|enable)\b/i.test(title) ||
+    /^[^:]+:\s*(add|adds|implement|introduce|support|enable)\b/i.test(title.trim())
+  const featureInText =
+    /\b(add(s|ing)?\s+support|implement(s|ed|ing)?|introduce(s|d)?)\b/.test(lower) ||
+    /\benable\s+(new|the|a)\b/.test(lower) ||
+    /\bnew\s+(driver|subsystem|api|helper|interface)\b/.test(lower)
+
+  if (bugfixInSubject || bugfixInText) return 'bugfix'
+  if (featureInSubject || featureInText) return 'feature'
+  return 'other'
+}
+

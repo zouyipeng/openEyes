@@ -1,6 +1,7 @@
 'use client'
 
-import ReactMarkdown from 'react-markdown'
+import { memo } from 'react'
+import { lkmlAnchorId } from '@/lib/lkmlAnchor'
 
 interface LKMLMessage {
   id: string
@@ -22,7 +23,6 @@ interface LKMLPatch {
   subsystem: string
   type: string
   highlight: boolean
-  summary: string
   messages: LKMLMessage[]
   replyCount: number
 }
@@ -45,117 +45,107 @@ interface Article {
 
 interface LKMLPatchCardProps {
   article: Article
+  isJumpHighlighted?: boolean
 }
 
 const typeColor: Record<string, string> = {
-  'feature': 'bg-green-900 text-green-300',
-  'bugfix': 'bg-red-900 text-red-300',
-  'other': 'bg-gray-700 text-gray-300'
+  feature: 'bg-green-900 text-green-300',
+  bugfix: 'bg-red-900 text-red-300',
+  other: 'bg-gray-700 text-gray-300',
 }
 
 const typeLabel: Record<string, string> = {
-  'feature': 'Feature',
-  'bugfix': 'Bugfix',
-  'other': 'Other'
+  feature: 'Feature',
+  bugfix: 'Bugfix',
+  other: 'Other',
 }
 
 function formatDate(dateStr: string): string {
   try {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+    return date.toLocaleString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   } catch {
     return ''
   }
 }
 
-export default function LKMLPatchCard({ article }: LKMLPatchCardProps) {
+function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCardProps) {
   const patch = article.patchData
-  
+  const anchorId = lkmlAnchorId(article.id)
+
   if (!patch) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-medium text-gray-100 mb-2 leading-relaxed">
-            {article.title}
-          </h3>
-          <p className="text-sm text-gray-400 mt-2 mb-3">{article.summary}</p>
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              {article.author && (
-                <>
-                  <span className="text-gray-500">👤</span>
-                  <span className="text-gray-400">{article.author}</span>
-                </>
-              )}
-            </div>
-            {article.url && (
-              <a 
+      <div
+        id={anchorId}
+        className={`scroll-mt-24 bg-gray-900/70 rounded-lg p-2.5 border hover:border-gray-700 transition-all duration-300 ${
+          isJumpHighlighted
+            ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
+            : 'border-gray-800'
+        }`}
+      >
+        <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
+          <h3 className="min-w-0 flex-1 text-gray-100 font-medium">
+            {article.url ? (
+              <a
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="hover:text-blue-300 transition-colors block truncate"
+                title={article.title}
               >
-                查看原文 →
+                {article.title}
               </a>
+            ) : (
+              <span className="block truncate" title={article.title}>
+                {article.title}
+              </span>
             )}
-          </div>
+          </h3>
+          {article.author && <span className="text-gray-400 shrink-0 truncate max-w-[140px]">{article.author}</span>}
+          {article.fetchedAt && <span className="text-gray-500 shrink-0">{formatDate(article.fetchedAt)}</span>}
         </div>
       </div>
     )
   }
-  
+
   return (
-    <div className={`bg-gray-800 rounded-lg p-4 border transition-colors ${
-      patch.highlight 
-        ? 'border-yellow-600/50 hover:border-yellow-500/50' 
-        : 'border-gray-700 hover:border-gray-600'
-    }`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${typeColor[patch.type] || typeColor.other}`}>
-            {typeLabel[patch.type] || patch.type}
-          </span>
-          <h3 className="text-base font-medium text-gray-100 leading-relaxed truncate">
-            {patch.title}
-          </h3>
-        </div>
-        
-        <div className="text-sm text-gray-400 leading-relaxed mb-3 prose prose-invert prose-sm max-w-none">
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => (
-                <p className="text-sm text-gray-400 my-0 leading-relaxed">{children}</p>
-              ),
-              strong: ({ children }) => (
-                <strong className="text-gray-300 font-medium">{children}</strong>
-              ),
-            }}
-          >
-            {patch.summary}
-          </ReactMarkdown>
-        </div>
-        
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">👤</span>
-            <span className="text-gray-400">{patch.author}</span>
-            {patch.date && (
-              <>
-                <span className="text-gray-600">·</span>
-                <span className="text-gray-500">{formatDate(patch.date)}</span>
-              </>
-            )}
-          </div>
-          <a 
+    <div
+      id={anchorId}
+      className={`scroll-mt-24 bg-gray-900/70 rounded-lg p-2.5 border transition-all duration-300 ${
+        isJumpHighlighted
+          ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
+          : patch.highlight
+            ? 'border-yellow-600/50 hover:border-yellow-500/50'
+            : 'border-gray-800 hover:border-gray-700'
+      }`}
+    >
+      <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
+        <span
+          className={`px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 ${typeColor[patch.type] || typeColor.other}`}
+        >
+          {typeLabel[patch.type] || patch.type}
+        </span>
+        <h3 className="min-w-0 flex-1 text-gray-100 font-medium">
+          <a
             href={patch.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
+            className="hover:text-blue-300 transition-colors block truncate"
+            title={patch.title}
           >
-            查看原文 →
+            {patch.title}
           </a>
-        </div>
+        </h3>
+        <span className="text-gray-400 shrink-0 truncate max-w-[140px]">{patch.author}</span>
+        {patch.date && <span className="text-gray-500 shrink-0">{formatDate(patch.date)}</span>}
       </div>
     </div>
   )
 }
+
+export default memo(LKMLPatchCardInner)

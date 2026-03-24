@@ -135,7 +135,7 @@ npx serve out -p 80
 npx serve out --listen 0.0.0.0:80
 
 # 只监听本地接口
-npx serve out --listen 127.0.0.1:3000
+npx serve out --listen tcp://127.0.0.1:3000
 ```
 
 #### 关闭前端服务
