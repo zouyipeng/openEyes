@@ -1,25 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
-import { dayDataApi, type DayData, type CategoryData } from '@/lib/api'
-import ArticleCard from '@/components/ArticleCard'
+import { dayDataApi, type DayData } from '@/lib/api'
 import LKMLPatchCard from '@/components/LKMLPatchCard'
 import PenguinIcon from '@/components/PenguinIcon'
 import ReactMarkdown from 'react-markdown'
 import { lkmlAnchorId } from '@/lib/lkmlAnchor'
-
-const categoryEmoji: Record<string, string> = {
-  AI: '🤖',
-  游戏: '🎮',
-  技术: '💻',
-  科技: '💻',
-  开发者: '👨‍💻',
-  财经: '💰',
-  新闻: '📰',
-  国际: '🌍',
-  'linux kernel': '🐧',
-  未分类: '📄',
-}
 
 const TYPE_ORDER: Record<string, number> = { feature: 0, bugfix: 1, other: 2 }
 const LKML_COLLAPSE_DEFAULT = 3
@@ -27,14 +13,6 @@ const TYPE_LABEL: Record<string, string> = {
   feature: 'Feature',
   bugfix: 'Bugfix',
   other: 'Other',
-}
-
-function sortArticlesByHighlight(articles: any[]) {
-  return [...articles].sort((a, b) => {
-    if (a.highlight && !b.highlight) return -1
-    if (!a.highlight && b.highlight) return 1
-    return new Date(b.fetchedAt).getTime() - new Date(a.fetchedAt).getTime()
-  })
 }
 
 function sortLinuxKernelArticles(articles: any[]) {
@@ -200,147 +178,44 @@ function LkmlGroupedList({
   )
 }
 
-interface NewsDashboardProps {
-  initialCategory?: string
-  initialDate?: string
-}
-
-export default function NewsDashboard({
-  initialCategory = 'all',
-  initialDate = '',
-}: NewsDashboardProps) {
+export default function NewsDashboard() {
   const [dayData, setDayData] = useState<DayData | null>(null)
-  const [categoryData, setCategoryData] = useState<CategoryData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [availableDates, setAvailableDates] = useState<string[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory)
-  const [selectedDate, setSelectedDate] = useState<string>(initialDate)
   const [expandedTypeMap, setExpandedTypeMap] = useState<Record<string, boolean>>({})
   const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadInitialData()
+    loadData()
   }, [])
-
-  useEffect(() => {
-    if (selectedDate) {
-      loadData()
-    }
-  }, [selectedDate, selectedCategory])
 
   useEffect(() => {
     setExpandedTypeMap({})
     setActiveAnchorId(null)
-  }, [selectedDate, selectedCategory])
-
-  const loadInitialData = async () => {
-    const dates = await dayDataApi.getAvailableDates()
-    setAvailableDates(dates)
-    const urlDate =
-      typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('date') || ''
-        : ''
-    const preferredDate = initialDate || urlDate
-
-    if (dates.length > 0) {
-      if (preferredDate && dates.includes(preferredDate)) {
-        setSelectedDate(preferredDate)
-      } else {
-        setSelectedDate(dates[0])
-      }
-    }
-  }
+  }, [])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      if (selectedCategory === 'all') {
-        const data = await dayDataApi.getDayData(selectedDate)
-        setDayData(data)
-        setCategoryData(null)
-
-        if (data) {
-          const cats = dayDataApi.getCategoriesFromDayData(data)
-          setCategories(cats)
-        } else {
-          setCategories([])
-        }
-      } else {
-        const data = await dayDataApi.getCategoryData(selectedCategory, selectedDate)
-        setCategoryData(data)
-
-        const fullDayData = await dayDataApi.getDayData(selectedDate)
-        if (fullDayData) {
-          const cats = dayDataApi.getCategoriesFromDayData(fullDayData)
-          setCategories(cats)
-        } else {
-          setCategories([])
-        }
-      }
+      const data = await dayDataApi.getLatestData()
+      setDayData(data)
     } catch (error) {
       console.error('加载数据失败:', error)
       setDayData(null)
-      setCategoryData(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const formatDateDisplay = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-')
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-    const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const articles = useMemo(() => {
+    if (!dayData?.articles) return []
+    return sortLinuxKernelArticles(dayData.articles)
+  }, [dayData])
 
-    if (dateStr === todayStr) {
-      return `今天 (${month}月${day}日 ${weekdays[date.getDay()]})`
-    }
-    return `${month}月${day}日 ${weekdays[date.getDay()]}`
-  }
-
-  const groupedArticles = useMemo(() => {
-    const data = dayData || categoryData
-    if (!data) return {}
-
-    if (categoryData) {
-      const arts =
-        categoryData.category === 'linux kernel'
-          ? sortLinuxKernelArticles(categoryData.articles)
-          : sortArticlesByHighlight(categoryData.articles)
-      return { [categoryData.category]: arts }
-    }
-
-    const grouped: Record<string, any[]> = {}
-
-    data.articles.forEach(article => {
-      const source = data.sources.find(s => s.id === article.sourceId)
-      const category = source?.category || '未分类'
-
-      if (!grouped[category]) {
-        grouped[category] = []
-      }
-      grouped[category].push(article)
-    })
-
-    Object.keys(grouped).forEach(category => {
-      grouped[category] =
-        category === 'linux kernel'
-          ? sortLinuxKernelArticles(grouped[category])
-          : sortArticlesByHighlight(grouped[category])
-    })
-
-    return grouped
-  }, [dayData, categoryData])
-
-  const articles = (dayData || categoryData)?.articles || []
-  const summary = (categoryData || dayData)?.summary || ''
+  const summary = dayData?.summary || ''
 
   const handlePatchAnchorJump = (anchorId: string) => {
     const id = decodeURIComponent(anchorId)
-    const linuxList = (groupedArticles['linux kernel'] || []) as any[]
-    const target = linuxList.find(a => lkmlAnchorId(a.id) === id)
+    const target = articles.find(a => lkmlAnchorId(a.id) === id)
     const t = target?.patchData?.type
     if (t === 'feature' || t === 'bugfix' || t === 'other') {
       setExpandedTypeMap(prev => ({ ...prev, [t]: true }))
@@ -457,41 +332,14 @@ export default function NewsDashboard({
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-              style={{ minWidth: '100px' }}
-            >
-              <option value="all">全部分类</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {categoryEmoji[cat] || '📄'} {cat}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-              style={{ minWidth: '140px' }}
-            >
-              {availableDates.map(date => (
-                <option key={date} value={date}>
-                  {formatDateDisplay(date)}
-                </option>
-              ))}
-            </select>
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
-              <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
-              <span>Linux Kernel动态</span>
-            </h1>
-          </div>
+          <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
+            <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
+            <span>Linux Kernel动态</span>
+          </h1>
           <span className="text-sm text-slate-500">共 {articles.length} 篇</span>
         </div>
 
-        {selectedCategory !== 'all' && summary && (
+        {summary && (
           <div className="bg-white rounded-xl p-4 mb-6 border border-slate-200 shadow-sm">
             <div className="flex items-start gap-3">
               <span className="text-2xl flex-shrink-0">💡</span>
@@ -502,41 +350,24 @@ export default function NewsDashboard({
           </div>
         )}
 
-        {Object.keys(groupedArticles).length === 0 ? (
+        {articles.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">📭</div>
             <h3 className="text-base font-medium text-slate-700 mb-2">暂无内容</h3>
-            <p className="text-sm text-slate-500">该分类或日期还没有抓取信息</p>
+            <p className="text-sm text-slate-500">还没有抓取到Linux kernel补丁</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedArticles).map(([category, categoryArticles]) => (
-              <div key={category}>
-                <h2 className="text-base font-semibold text-slate-700 flex items-center gap-2 mb-3">
-                  <span>{categoryEmoji[category] || '📄'}</span>
-                  <span>{category}</span>
-                  <span className="text-xs text-slate-400 font-normal">({categoryArticles.length})</span>
-                </h2>
-                {category === 'linux kernel' && <LkmlTypeStatsBar articles={categoryArticles} />}
-                {category === 'linux kernel' ? (
-                  <LkmlGroupedList
-                    articles={categoryArticles}
-                    expanded={expandedTypeMap}
-                    activeAnchorId={activeAnchorId}
-                    onToggle={(type) =>
-                      setExpandedTypeMap(prev => ({ ...prev, [type]: !prev[type] }))
-                    }
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {categoryArticles.map((article: any) => (
-                      <ArticleCard key={article.id} article={article} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <>
+            <LkmlTypeStatsBar articles={articles} />
+            <LkmlGroupedList
+              articles={articles}
+              expanded={expandedTypeMap}
+              activeAnchorId={activeAnchorId}
+              onToggle={(type) =>
+                setExpandedTypeMap(prev => ({ ...prev, [type]: !prev[type] }))
+              }
+            />
+          </>
         )}
       </div>
     </div>

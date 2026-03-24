@@ -1,14 +1,14 @@
 {
-  "name": "openeyes",
+  "name": "lkml-fetcher",
   "version": "1.0.0",
-  "description": "互联网信息收集与整合平台",
+  "description": "Linux Kernel Mailing List 补丁抓取与展示工具",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
-  "keywords": [],
+  "keywords": ["linux", "kernel", "lkml", "patch", "fetcher"],
   "author": "",
   "license": "ISC",
   "dependencies": {

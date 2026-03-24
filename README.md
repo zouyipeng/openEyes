@@ -1,34 +1,26 @@
-# openEyes 👁️
+# LKML Fetcher 🐧
 
-一个互联网信息收集与整合平台，通过网页（支持移动端）每日整合展示来自多个信息源的内容，并使用 AI 进行智能总结。
+一个专注于Linux Kernel Mailing List补丁抓取与展示的工具。
 
 ## ✨ 功能特性
 
-- **多源信息收集**
-  - RSS 订阅解析
-  - 网页爬虫（自定义 CSS 选择器）
-  - 信息源 JSON 配置管理
-  - WeWe RSS 自动刷新与获取
+- **LKML补丁抓取**
+  - 自动抓取Linux Kernel邮件列表中的补丁
+  - 智能识别补丁类型（Feature/Bugfix/Other）
+  - 解析补丁详情（commit message、修改文件）
+  - 支持并发抓取，自动限速避免429错误
 
-- **AI 智能处理**
-  - 文章内容自动总结
-  - 每日信息摘要生成
-  - 支持 OpenAI 兼容 API（如 MiniMax）
-  - 可配置 maxTokens 参数
-  - 重复抓取优化（基于 URL 记录）
+- **AI智能总结**
+  - 自动生成补丁摘要
+  - 每日补丁动态总结
+  - 支持OpenAI兼容API
 
 - **信息展示**
-  - 今日信息汇总页面
-  - 按分类分组展示
-  - Markdown 格式渲染
+  - 按类型分组展示补丁
+  - 补丁统计信息
+  - Markdown格式渲染
   - 移动端适配
-  - 暗色主题
-  - 日期下拉选择器（自动识别可用数据文件）
-
-- **架构设计**
-  - 前后端通过 JSON 文件直接交互，无后端 API 依赖
-  - 静态文件存储（public 目录）
-  - 支持多日期数据文件管理
+  - 明亮主题
 
 ## 🛠️ 技术栈
 
@@ -38,7 +30,7 @@
 | 语言 | TypeScript |
 | 样式 | Tailwind CSS |
 | 数据存储 | JSON 文件 |
-| 信息抓取 | RSS Parser + Cheerio + Axios |
+| 信息抓取 | Axios + Cheerio |
 | AI | OpenAI API (兼容 MiniMax 等) |
 
 ## 📦 安装
@@ -87,18 +79,21 @@ cd backend && npm install && cd ..
 
 ### 2. 配置信息源
 
-编辑 `backend/sources-config.json`：
+编辑 `backend/sources-config.json`（默认已配置好LKML源）：
 
 ```json
 {
   "sources": [
     {
-      "id": "36kr-ai",
-      "name": "36氪",
-      "type": "rss",
-      "url": "https://36kr.com/feed",
-      "category": "AI",
-      "active": true
+      "id": "lkml-today",
+      "name": "Linux Kernel Mailing List",
+      "type": "lkml",
+      "url": "https://lkml.org/",
+      "category": "linux kernel",
+      "active": true,
+      "excludeAuthors": ["kernel test robot"],
+      "lkmlDetailConcurrency": 12,
+      "lkmlDetailTimeoutMs": 8000
     }
   ]
 }
@@ -112,10 +107,7 @@ cd backend && npm install && cd ..
 # 终端1：启动前端 (默认端口 3000)
 npm run dev
 
-# 自定义开发服务器主机和端口
-npm run dev -- -H 0.0.0.0 -p 8080
-
-# 终端2：抓取信息
+# 终端2：抓取补丁
 cd backend && npx tsx src/cli/index.ts fetch
 ```
 
@@ -125,37 +117,8 @@ cd backend && npx tsx src/cli/index.ts fetch
 # 构建前端项目
 npm run build
 
-# 启动静态文件服务器 (默认端口 3000，默认监听所有接口)
+# 启动静态文件服务器 (默认端口 3000)
 npx serve out
-
-# 自定义部署端口
-npx serve out -p 80
-
-# 自定义主机和端口
-npx serve out --listen 0.0.0.0:80
-
-# 只监听本地接口
-npx serve out --listen tcp://127.0.0.1:3000
-```
-
-#### 关闭前端服务
-
-在 Windows 上：
-```bash
-# 查找占用 3000 端口的进程
-netstat -ano | findstr :3000
-
-# 终止进程 (将 12345 替换为实际的 PID)
-taskkill /PID 12345 /F
-```
-
-在 Linux/macOS 上：
-```bash
-# 查找占用 3000 端口的进程
-lsof -i :3000
-
-# 终止进程 (将 12345 替换为实际的 PID)
-kill -9 12345
 ```
 
 ### 抓取命令
@@ -163,28 +126,25 @@ kill -9 12345
 ```bash
 cd backend
 
-# 抓取所有信息源
+# 抓取Linux kernel补丁
 npx tsx src/cli/index.ts fetch
 
 # 强制抓取（忽略已处理记录）
 npx tsx src/cli/index.ts fetch --force
 
-# 抓取时跳过 WeWe RSS 刷新
-npx tsx src/cli/index.ts fetch --skip-refresh
+# 调试模式（限制抓取数量）
+npx tsx src/cli/index.ts fetch --debug
 
-# 只抓取特定分类的信息源
-npx tsx src/cli/index.ts fetch --category 技术
-
-# 组合使用参数（只抓取技术分类，强制刷新）
-npx tsx src/cli/index.ts fetch --category 技术 --force --skip-refresh
+# 生成补丁摘要
+npx tsx src/cli/index.ts summary
 
 # 列出所有信息源
 npx tsx src/cli/index.ts list:sources
 
-# 列出已处理的文章 URL
+# 列出已处理的补丁 URL
 npx tsx src/cli/index.ts list:processed
 
-# 清除已处理的文章记录
+# 清除已处理的补丁记录
 npx tsx src/cli/index.ts clear:processed
 ```
 
@@ -198,116 +158,67 @@ openEyes/
 │   ├── src/
 │   │   ├── cli/               # CLI 命令
 │   │   │   └── index.ts       # 抓取、摘要等命令
-│   │   ├── lib/               # 工具库
-│   │   │   ├── ai.ts          # AI 总结
-│   │   │   ├── fetcher.ts     # 信息抓取
-│   │   │   └── storage.ts     # JSON 存储
-│   │   └── scripts/           # 脚本目录
-│   │       └── generate-summaries.ts # 生成摘要脚本
+│   │   └── lib/               # 工具库
+│   │       ├── ai.ts          # AI 总结
+│   │       ├── fetcher.ts     # LKML 抓取
+│   │       └── storage.ts     # JSON 存储
 │   ├── config.json            # AI 配置
 │   └── sources-config.json    # 信息源配置
 ├── public/                    # 静态资源和数据
-│   ├── YYYY-MM-DD.json        # 每日数据文件
-│   ├── 分类名-YYYY-MM-DD.json  # 按分类存储的每日数据
-│   ├── processed-articles.json # 已处理文章记录
+│   ├── linux kernel-YYYY-MM-DD.json  # 补丁数据文件
+│   ├── processed-articles.json # 已处理补丁记录
 │   └── dates.json             # 可用日期索引
 ├── src/                       # 前端
 │   ├── app/
 │   │   ├── page.tsx          # 首页
 │   │   └── layout.tsx        # 布局
 │   ├── components/           # 组件
-│   │   └── ArticleCard.tsx   # 文章卡片
+│   │   ├── LKMLPatchCard.tsx # 补丁卡片
+│   │   ├── NewsDashboard.tsx # 主面板
+│   │   └── PenguinIcon.tsx   # Linux企鹅图标
 │   └── lib/
-│       └── api.ts            # 前端 API（静态文件读取）
-├── docker-compose.wewe-rss.yml # WeWe RSS 部署配置
-├── docs/                      # 文档目录
-│   └── wewe-rss-deployment.md # WeWe RSS 部署文档
+│       ├── api.ts            # 前端 API
+│       └── lkmlAnchor.ts     # 锚点工具
 └── README.md
 ```
 
 ## 📄 数据格式
 
-### 1. 每日数据文件 (public/YYYY-MM-DD.json)
+### 补丁数据文件 (public/linux kernel-YYYY-MM-DD.json)
 
 ```json
 {
-  "date": "2026-03-21",
-  "generatedAt": "2026-03-21T15:00:00Z",
-  "summary": "## 每日信息摘要\n...",
+  "date": "2026-03-24",
+  "generatedAt": "2026-03-24T10:00:00Z",
+  "summary": "## 今日社区动态\n...",
   "articles": [
     {
-      "id": "article-id",
-      "sourceId": "source-id",
-      "sourceName": "信息源名称",
-      "title": "文章标题",
-      "content": "文章内容",
-      "summary": "AI 摘要",
-      "url": "原文链接",
-      "category": "分类名称"
+      "id": "patch-id",
+      "title": "补丁标题",
+      "url": "补丁链接",
+      "author": "作者",
+      "content": "补丁内容",
+      "patchData": {
+        "type": "feature",
+        "commitMessage": "...",
+        "changedFiles": ["file1.c", "file2.h"]
+      }
     }
   ],
   "sources": [...]
 }
 ```
 
-### 2. 分类数据文件 (public/分类名-YYYY-MM-DD.json)
-
-```json
-{
-  "date": "2026-03-21",
-  "category": "AI",
-  "generatedAt": "2026-03-21T15:00:00Z",
-  "articles": [
-    {
-      "id": "article-id",
-      "sourceId": "source-id",
-      "sourceName": "信息源名称",
-      "title": "文章标题",
-      "content": "文章内容",
-      "summary": "AI 摘要",
-      "url": "原文链接"
-    }
-  ]
-}
-```
-
-### 3. 日期索引文件 (public/dates.json)
-
-```json
-[
-  "2026-03-21",
-  "2026-03-20",
-  "2026-03-19"
-]
-```
-
-### 4. 已处理文章记录 (public/processed-articles.json)
-
-```json
-{
-  "processedUrls": [
-    "https://example.com/article1",
-    "https://example.com/article2"
-  ]
-}
-```
-
 ## 📝 开发计划
 
-- [x] 移除 SQLite，改用 JSON 存储
-- [x] 信息源 JSON 配置
-- [x] AI 总结清理优化
-- [x] 数据文件直接保存到 public 目录
-- [x] 前后端通过 JSON 文件直接交互（无后端 API 依赖）
-- [x] 日期下拉选择器（自动识别可用数据文件）
-- [x] WeWe RSS 自动刷新与获取
-- [x] 重复抓取优化（基于 URL 记录）
-- [x] 分类数据文件存储
+- [x] LKML补丁抓取
+- [x] 补丁类型识别
+- [x] AI智能总结
+- [x] 补丁分组展示
 - [ ] 定时任务自动抓取
-- [ ] 文章详情页
-- [ ] 社交媒体源支持
-- [ ] 用户自定义信息源
+- [ ] 补丁详情页
 - [ ] 搜索功能
+- [ ] 订阅特定子系统
 
 ## 📄 License
 
@@ -320,4 +231,4 @@ ISC
 
 ---
 
-**openEyes** - 让信息触手可及 👁️
+**LKML Fetcher** - 让Linux kernel补丁触手可及 🐧

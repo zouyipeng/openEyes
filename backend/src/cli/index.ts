@@ -5,14 +5,11 @@ import { generateDailySummary } from '../lib/ai'
 import { 
   loadSources,
   saveDayData,
-  saveCategoryData,
   loadDayData,
-  loadCategoryData,
   loadProcessedUrls,
   saveProcessedUrls,
   getTodayString,
-  type DayData,
-  type CategoryData
+  type DayData
 } from '../lib/storage'
 import fs from 'fs'
 import path from 'path'
@@ -22,27 +19,23 @@ const DATA_DIR = path.join(__dirname, '..', '..', '..', 'public')
 const program = new Command()
 
 program
-  .name('openeyes')
-  .description('openEyes 后端 CLI 工具')
+  .name('lkml-fetcher')
+  .description('Linux Kernel Mailing List 补丁抓取工具')
   .version('1.0.0')
 
 program
   .command('fetch')
-  .description('抓取信息源的内容并保存')
+  .description('抓取Linux kernel补丁并保存')
   .option('-f, --force', '强制重新抓取（忽略已处理记录）')
-  .option('-s, --skip-refresh', '跳过 WeWe RSS 刷新')
-  .option('-c, --category <category>', '只抓取指定分类的信息源')
-  .option('-d, --debug', '调试模式：限制每个信息源只抓取少量数据')
+  .option('-d, --debug', '调试模式：限制抓取数量')
   .action(async (options) => {
-    console.log('开始抓取信息...')
+    console.log('开始抓取Linux kernel补丁...')
     if (options.debug) {
       console.log('🐛 调试模式已启用，将限制抓取数量')
     }
     try {
       await fetchAndSave({
         force: options.force || false,
-        skipRefresh: options.skipRefresh || false,
-        category: options.category,
         debug: options.debug || false
       })
     } catch (error) {
@@ -53,56 +46,31 @@ program
 
 program
   .command('summary')
-  .description('生成每日摘要')
-  .option('-c, --category <category>', '指定分类')
-  .action(async (options) => {
-    console.log('生成每日摘要...')
+  .description('生成Linux kernel补丁摘要')
+  .action(async () => {
+    console.log('生成Linux kernel补丁摘要...')
     try {
       const dateStr = getTodayString()
+      const dayData = loadDayData(dateStr)
       
-      if (options.category) {
-        const categoryData = loadCategoryData(options.category, dateStr)
-        
-        if (!categoryData || categoryData.articles.length === 0) {
-          console.log(`${options.category} 分类今日暂无文章`)
-          return
-        }
-
-        const summary = await generateDailySummary(categoryData.articles.map(a => ({
-          title: a.title,
-          content: a.content || undefined,
-          sourceName: a.sourceName
-        })))
-
-        categoryData.summary = summary
-        saveCategoryData(categoryData)
-
-        console.log(`\n${options.category} 分类摘要:`)
-        console.log('='.repeat(50))
-        console.log(summary)
-        console.log('='.repeat(50))
-      } else {
-        const dayData = loadDayData(dateStr)
-        
-        if (!dayData || dayData.articles.length === 0) {
-          console.log('今日暂无文章，请先执行 fetch 命令')
-          return
-        }
-
-        const summary = await generateDailySummary(dayData.articles.map(a => ({
-          title: a.title,
-          content: a.content || undefined,
-          sourceName: a.sourceName
-        })))
-
-        dayData.summary = summary
-        saveDayData(dayData)
-
-        console.log('\n每日摘要:')
-        console.log('='.repeat(50))
-        console.log(summary)
-        console.log('='.repeat(50))
+      if (!dayData || dayData.articles.length === 0) {
+        console.log('今日暂无补丁，请先执行 fetch 命令')
+        return
       }
+
+      const summary = await generateDailySummary(dayData.articles.map(a => ({
+        title: a.title,
+        content: a.content || undefined,
+        sourceName: a.sourceName
+      })))
+
+      dayData.summary = summary
+      saveDayData(dayData)
+
+      console.log('\nLinux kernel补丁摘要:')
+      console.log('='.repeat(50))
+      console.log(summary)
+      console.log('='.repeat(50))
     } catch (error) {
       console.error('生成摘要失败:', error)
       process.exit(1)
@@ -120,7 +88,6 @@ program
       console.log(`ID: ${source.id}`)
       console.log(`名称: ${source.name}`)
       console.log(`类型: ${source.type}`)
-      console.log(`分类: ${source.category}`)
       console.log(`URL: ${source.url}`)
       console.log(`状态: ${source.active ? '启用' : '禁用'}`)
       console.log('-'.repeat(80))
@@ -152,26 +119,17 @@ program
       const dayData = loadDayData(dateStr)
       
       if (dayData) {
-        const categories = new Set<string>()
-        dayData.articles.forEach(article => {
-          const source = dayData.sources.find(s => s.id === article.sourceId)
-          if (source?.category) {
-            categories.add(source.category)
-          }
-        })
-        
-        console.log(`📅 ${dateStr} (${dayData.articles.length} 篇文章)`)
-        console.log(`   分类: ${Array.from(categories).join(', ')}`)
+        console.log(`📅 ${dateStr} (${dayData.articles.length} 个补丁)`)
       }
     })
   })
 
 program
   .command('list:processed')
-  .description('列出已处理的文章URL')
+  .description('列出已处理的补丁URL')
   .action(() => {
     const processedUrls = loadProcessedUrls()
-    console.log(`已处理文章: ${processedUrls.size} 条`)
+    console.log(`已处理补丁: ${processedUrls.size} 条`)
     console.log('='.repeat(80))
     
     const urls = Array.from(processedUrls).slice(0, 20)

@@ -1,7 +1,5 @@
-import RSSParser from 'rss-parser'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
-import { spawn } from 'child_process'
 import { 
   loadSources, 
   loadProcessedUrls,
@@ -9,7 +7,6 @@ import {
   getTodayString,
   generateArticleId,
   saveDayData,
-  saveAllCategoryData,
   loadDayData,
   loadSourcesConfig,
   type Source,
@@ -24,190 +21,10 @@ import {
   inferPatchTypeRuleBased,
   clearAllCategoryContexts,
 } from './ai'
-import path from 'path'
 
 interface FetchOptions {
   force?: boolean
-  skipRefresh?: boolean
-  category?: string
   debug?: boolean
-}
-
-interface SourceConfig {
-  selector?: string
-  titleSelector?: string
-  linkSelector?: string
-  contentSelector?: string
-}
-
-const WEWE_RSS_URL = process.env.WEWE_RSS_URL || 'http://localhost:4000'
-
-function extractTextFromHtml(html: string): string {
-  const $ = cheerio.load(html)
-  
-  const richMediaContent = $('#js_content, .rich_media_content, .js_name, #js_name')
-  
-  if (richMediaContent.length > 0) {
-    richMediaContent.find('script, style, noscript').remove()
-    return richMediaContent.text().replace(/\s+/g, ' ').trim()
-  }
-  
-  const articleContent = $('article, .article-content, .post-content, .entry-content')
-  if (articleContent.length > 0) {
-    articleContent.find('script, style, noscript').remove()
-    return articleContent.text().replace(/\s+/g, ' ').trim()
-  }
-  
-  $('script, style, noscript, head, nav, footer, aside').remove()
-  return $('body').text().replace(/\s+/g, ' ').trim()
-}
-
-function cleanContent(content: string): string {
-  return content
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n/g, '\n')
-    .trim()
-    .substring(0, 8000)
-}
-
-async function isWeWeRSSRunning(): Promise<boolean> {
-  try {
-    await axios.get(WEWE_RSS_URL, { timeout: 5000 })
-    return true
-  } catch {
-    return false
-  }
-}
-
-async function startWeWeRSS(): Promise<boolean> {
-  try {
-    console.log('[Fetcher] 正在启动 WeWe RSS 服务...')
-    const composePath = path.join(__dirname, '..', '..', '..', 'docker-compose.wewe-rss.yml')
-    
-    return new Promise((resolve) => {
-      const process = spawn('docker-compose', ['-f', composePath, 'up', '-d'], {
-        stdio: 'inherit'
-      })
-      
-      process.on('close', (code) => {
-        if (code === 0) {
-          console.log('[Fetcher] WeWe RSS 服务启动成功')
-          resolve(true)
-        } else {
-          console.error('[Fetcher] WeWe RSS 服务启动失败，退出码:', code)
-          resolve(false)
-        }
-      })
-      
-      process.on('error', (error) => {
-        console.error('[Fetcher] 启动 WeWe RSS 服务时发生错误:', error)
-        resolve(false)
-      })
-    })
-  } catch (error) {
-    console.error('[Fetcher] 启动 WeWe RSS 服务失败:', error)
-    return false
-  }
-}
-
-async function waitForWeWeRSS(startupTime = 30000): Promise<boolean> {
-  const startTime = Date.now()
-  
-  while (Date.now() - startTime < startupTime) {
-    if (await isWeWeRSSRunning()) {
-      return true
-    }
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    console.log('[Fetcher] 等待 WeWe RSS 服务启动...')
-  }
-  
-  return false
-}
-
-async function refreshWeWeRSS(): Promise<boolean> {
-  try {
-    // 检查 WeWe RSS 服务是否运行
-    if (!(await isWeWeRSSRunning())) {
-      console.log('[Fetcher] WeWe RSS 服务未运行')
-      
-      // 尝试启动服务
-      if (!(await startWeWeRSS())) {
-        return false
-      }
-      
-      // 等待服务启动
-      if (!(await waitForWeWeRSS())) {
-        console.error('[Fetcher] WeWe RSS 服务启动超时')
-        return false
-      }
-    }
-    
-    // WeWe RSS 服务已运行，从日志分析看，它会自动刷新内容，无需外部刷新请求
-    console.log('[Fetcher] WeWe RSS 服务已运行')
-    return true
-  } catch (error: any) {
-    console.warn('[Fetcher] WeWe RSS 状态检查失败:', error.message || error)
-    return false
-  }
-}
-
-export async function fetchRSS(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
-  try {
-    const rssParser = new RSSParser({
-      customFields: {
-        item: ['content:encoded', 'encoded']
-      }
-    })
-    const feed = await rssParser.parseURL(source.url)
-    const articles: Article[] = []
-
-    if (!feed.items || !Array.isArray(feed.items) || feed.items.length === 0) {
-      console.log(`RSS 源 [${source.name}] 没有可迭代的 items`)
-      return articles
-    }
-
-    const item = feed.items[0]
-    const articleUrl = item.link || ''
-
-    if (!force && processedUrls.has(articleUrl)) {
-      console.log(`[Fetcher] ${source.name} - 文章已处理过，跳过`)
-      return articles
-    }
-
-    let rawContent = ''
-    const encodedContent = (item as any)['content:encoded'] || (item as any).encoded || ''
-    
-    if (encodedContent) {
-      rawContent = extractTextFromHtml(encodedContent)
-    }
-    
-    if (!rawContent || rawContent.length < 100) {
-      rawContent = item.contentSnippet || item.content || ''
-    }
-    
-    const content = cleanContent(rawContent)
-
-    const article: Article = {
-      id: generateArticleId(),
-      sourceId: source.id,
-      sourceName: source.name,
-      sourceUrl: source.url,
-      title: item.title || '无标题',
-      content,
-      url: articleUrl,
-      author: item.creator,
-      publishedAt: item.pubDate,
-      fetchedAt: new Date().toISOString()
-    }
-
-    articles.push(article)
-    console.log(`[Fetcher] ${source.name} - 获取 1 篇文章 (内容长度: ${content.length} 字符)`)
-
-    return articles
-  } catch (error) {
-    console.error(`RSS抓取失败 [${source.name}]:`, error)
-    throw error
-  }
 }
 
 function buildLkmlDayPageUrl(baseUrl: string, day: Date): string {
@@ -651,65 +468,10 @@ export async function fetchLKML(source: Source, processedUrls: Set<string>, forc
   }
 }
 
-export async function fetchCrawler(source: Source, processedUrls: Set<string>, force: boolean = false): Promise<Article[]> {
-  try {
-    const config: SourceConfig = source.config ? JSON.parse(source.config as any) : {}
-    const response = await axios.get(source.url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    })
-    const $ = cheerio.load(response.data)
-    const articles: Article[] = []
-
-    const items = $(config.selector || 'article, .post, .item')
-
-    for (const element of items.toArray()) {
-      const $item = $(element)
-      const titleEl = config.titleSelector ? $item.find(config.titleSelector) : $item.find('h1, h2, h3, .title, a')
-      const linkEl = config.linkSelector ? $item.find(config.linkSelector) : $item.find('a')
-      const contentEl = config.contentSelector ? $item.find(config.contentSelector) : $item.find('p, .content, .summary')
-
-      const title = titleEl.first().text().trim()
-      const link = linkEl.first().attr('href')
-      const content = contentEl.first().text().trim()
-
-      if (!title || !link) continue
-
-      const fullUrl = link.startsWith('http') ? link : new URL(link, source.url).href
-
-      if (!force && processedUrls.has(fullUrl)) continue
-
-      const article: Article = {
-        id: generateArticleId(),
-        sourceId: source.id,
-        sourceName: source.name,
-        sourceUrl: source.url,
-        title,
-        content,
-        url: fullUrl,
-        fetchedAt: new Date().toISOString()
-      }
-
-      articles.push(article)
-    }
-
-    return articles
-  } catch (error) {
-    console.error(`爬虫抓取失败 [${source.name}]:`, error)
-    throw error
-  }
-}
-
-export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, category?: string, debug: boolean = false): Promise<Article[]> {
+export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, debug: boolean = false): Promise<Article[]> {
   let sources = loadSources().filter(s => s.active)
   
-  if (category) {
-    sources = sources.filter(s => s.category === category)
-    console.log(`[Fetcher] 只抓取分类 "${category}" 的 ${sources.length} 个信息源`)
-  } else {
-    console.log(`[Fetcher] 开始抓取所有 ${sources.length} 个信息源`)
-  }
+  console.log(`[Fetcher] 开始抓取 ${sources.length} 个Linux kernel信息源`)
 
   const results = {
     success: 0,
@@ -723,18 +485,11 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
       console.log(`[Fetcher] 正在抓取: ${source.name} (${source.type})`)
       let articles: Article[] = []
 
-      switch (source.type) {
-        case 'rss':
-          articles = await fetchRSS(source, processedUrls, force)
-          break
-        case 'crawler':
-          articles = await fetchCrawler(source, processedUrls, force)
-          break
-        case 'lkml':
-          articles = await fetchLKML(source, processedUrls, force, debug)
-          break
-        default:
-          console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
+      if (source.type === 'lkml') {
+        articles = await fetchLKML(source, processedUrls, force, debug)
+      } else {
+        console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
+        continue
       }
 
       results.success++
@@ -761,25 +516,19 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
 }
 
 export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
-  const { force = false, skipRefresh = false, category, debug = false } = options
+  const { force = false, debug = false } = options
   const todayStr = getTodayString()
   const sourcesConfig = loadSourcesConfig()
   const sources = sourcesConfig.sources.filter(s => s.active)
   const globalConfig = sourcesConfig.globalConfig
   
-  console.log(`[Fetcher] 开始抓取并保存数据...`)
-  console.log(`[Fetcher] 选项: force=${force}, skipRefresh=${skipRefresh}${category ? `, category=${category}` : ''}${debug ? ', debug=true' : ''}`)
-  
-  if (!skipRefresh) {
-    await refreshWeWeRSS()
-  } else {
-    console.log('[Fetcher] 跳过 WeWe RSS 刷新')
-  }
+  console.log(`[Fetcher] 开始抓取并保存Linux kernel补丁数据...`)
+  console.log(`[Fetcher] 选项: force=${force}${debug ? ', debug=true' : ''}`)
   
   const processedUrls = loadProcessedUrls()
   console.log(`[Fetcher] 已加载 ${processedUrls.size} 条已处理URL记录`)
   
-  const newArticles = await fetchAllSources(processedUrls, force, category, debug)
+  const newArticles = await fetchAllSources(processedUrls, force, debug)
   
   if (newArticles.length === 0) {
     console.log(`[Fetcher] 没有新文章，跳过保存`)
@@ -832,56 +581,29 @@ export async function fetchAndSave(options: FetchOptions = {}): Promise<void> {
   
   clearAllCategoryContexts()
   
-  const categoryArticles: Record<string, Article[]> = {}
   const categorySummaries: Record<string, string> = {}
   
-  allArticles.forEach(article => {
-    const source = sources.find(s => s.id === article.sourceId)
-    const cat = source?.category || '未分类'
-    
-    if (!categoryArticles[cat]) {
-      categoryArticles[cat] = []
-    }
-    categoryArticles[cat].push(article)
-  })
+  console.log(`[AI] 开始生成Linux kernel补丁总结...`)
   
-  if (debug) {
-    for (const cat of Object.keys(categoryArticles)) {
-      if (categoryArticles[cat].length > 5) {
-        console.log(`[Fetcher] Debug 模式: 限制分类 ${cat} 的文章数量为 5 篇`)
-        categoryArticles[cat] = categoryArticles[cat].slice(0, 5)
-      }
-    }
-  }
-  
-  console.log(`[AI] 开始按分类进行 AI 总结...`)
-  
-  for (const cat of Object.keys(categoryArticles)) {
-    console.log(`[AI] 处理分类: ${cat} (${categoryArticles[cat].length} 篇文章)`)
-
-    const catSummary = await generateCategorySummary(
-      categoryArticles[cat],
-      cat,
-      globalConfig
-    )
-    categorySummaries[cat] = catSummary
-    console.log(`[AI] 分类 ${cat} 摘要生成完成`)
-  }
+  const catSummary = await generateCategorySummary(
+    allArticles,
+    'linux kernel',
+    globalConfig
+  )
+  categorySummaries['linux kernel'] = catSummary
+  console.log(`[AI] Linux kernel 摘要生成完成`)
   
   const dayData: DayData = {
     date: todayStr,
     generatedAt: new Date().toISOString(),
-    summary: '',
+    summary: catSummary,
     articles: allArticles,
     sources
   }
   
   saveDayData(dayData)
   
-  saveAllCategoryData(allArticles, sources, todayStr, categorySummaries)
-  
   console.log(`[Fetcher] 数据保存完成！`)
   console.log(`[Fetcher] - 日期: ${todayStr}`)
   console.log(`[Fetcher] - 文章数: ${allArticles.length}`)
-  console.log(`[Fetcher] - 分类数: ${Object.keys(categoryArticles).length}`)
 }
