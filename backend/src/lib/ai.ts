@@ -152,18 +152,25 @@ function normalizeParagraphToBullets(text: string): string {
   return normalized.map(p => `- ${p}`).join('\n')
 }
 
+function linuxOverviewHeadingWithModel(): string {
+  const model = config.openai.model?.trim() || 'unknown'
+  return `### 今日社区动态（模型：${model}）`
+}
+
 function normalizeCategorySummary(content: string, category?: string): string {
   const cleaned = cleanAIResponse(content)
   if (!cleaned) return ''
 
   if (category === 'linux kernel') {
-    const hasOverallSections = cleaned.includes('今日补丁概览') && cleaned.includes('总体评价')
+    const hasOverallSections =
+      (cleaned.includes('今日补丁概览') || cleaned.includes('今日社区动态')) &&
+      cleaned.includes('总体评价')
     if (hasOverallSections) {
-      const blockAfterOverview = cleaned.split(/#{1,6}\s*今日补丁概览\s*/)[1] || ''
+      const blockAfterOverview = cleaned.split(/#{1,6}\s*(今日补丁概览|今日社区动态)\s*/)[2] || ''
       const overviewPart = blockAfterOverview.split(/#{1,6}\s*总体评价\s*/)[0]?.trim() || ''
       const reviewPart = cleaned.split(/#{1,6}\s*总体评价\s*/)[1]?.trim() || ''
       return [
-        '### 今日补丁概览',
+        linuxOverviewHeadingWithModel(),
         normalizeParagraphToBullets(overviewPart || '今日补丁覆盖多个子系统，以修复与维护为主。'),
         '',
         '### 总体评价',
@@ -185,7 +192,7 @@ function normalizeCategorySummary(content: string, category?: string): string {
     const overview = lines.slice(0, 5).join(' ')
     const review = lines.slice(5).join(' ')
     return [
-      '### 今日补丁概览',
+      linuxOverviewHeadingWithModel(),
       normalizeParagraphToBullets(overview || '今日补丁覆盖多个子系统，以修复与维护为主。'),
       '',
       '### 总体评价',
@@ -307,7 +314,7 @@ export function linkifyLinuxKernelPrimaryPatches(markdown: string, articles: Art
 
 function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): string {
   if (articles.length === 0) return markdown
-  if (!markdown.includes('### 今日补丁概览')) return markdown
+  if (!markdown.includes('### 今日补丁概览') && !markdown.includes('### 今日社区动态')) return markdown
 
   const featureArticles = articles
     .filter(a => a.patchData?.type === 'feature')
@@ -315,10 +322,10 @@ function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): s
 
   if (featureArticles.length === 0) return markdown
 
-  const afterOverview = markdown.split(/#{1,6}\s*今日补丁概览\s*/)
-  if (afterOverview.length < 2) return markdown
+  const afterOverview = markdown.split(/#{1,6}\s*(今日补丁概览|今日社区动态)(?:（模型：[^\n）]+）)?\s*/)
+  if (afterOverview.length < 3) return markdown
 
-  const overviewAndTail = afterOverview[1]
+  const overviewAndTail = afterOverview[2]
   const reviewMatch = overviewAndTail.match(/\n#{1,6}\s*总体评价\s*/)
   if (!reviewMatch || reviewMatch.index === undefined) {
     return markdown
@@ -393,7 +400,7 @@ function appendLinuxKernelFeatureLinks(markdown: string, articles: Article[]): s
     }
   }
 
-  return `${afterOverview[0]}### 今日补丁概览\n${outLines.join('\n')}\n${tail}`
+  return `${afterOverview[0]}${linuxOverviewHeadingWithModel()}\n${outLines.join('\n')}\n${tail}`
 }
 
 async function sleep(ms: number): Promise<void> {
