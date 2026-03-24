@@ -154,7 +154,7 @@ function normalizeParagraphToBullets(text: string): string {
 
 function linuxOverviewHeadingWithModel(): string {
   const model = config.openai.model?.trim() || 'unknown'
-  return `### 今日社区动态（模型：${model}）`
+  return `### 今日社区动态（${model}）`
 }
 
 function normalizeCategorySummary(content: string, category?: string): string {
