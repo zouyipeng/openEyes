@@ -181,22 +181,39 @@ function LkmlGroupedList({
 export default function NewsDashboard() {
   const [dayData, setDayData] = useState<DayData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [availableDates, setAvailableDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const [expandedTypeMap, setExpandedTypeMap] = useState<Record<string, boolean>>({})
   const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadData()
+    loadInitialData()
   }, [])
+
+  useEffect(() => {
+    if (selectedDate) {
+      loadData(selectedDate)
+    }
+  }, [selectedDate])
 
   useEffect(() => {
     setExpandedTypeMap({})
     setActiveAnchorId(null)
-  }, [])
+  }, [selectedDate])
 
-  const loadData = async () => {
+  const loadInitialData = async () => {
+    const dates = await dayDataApi.getAvailableDates()
+    setAvailableDates(dates)
+    
+    if (dates.length > 0) {
+      setSelectedDate(dates[0])
+    }
+  }
+
+  const loadData = async (dateStr: string) => {
     setLoading(true)
     try {
-      const data = await dayDataApi.getLatestData()
+      const data = await dayDataApi.getDataByDate(dateStr)
       setDayData(data)
     } catch (error) {
       console.error('加载数据失败:', error)
@@ -212,6 +229,19 @@ export default function NewsDashboard() {
   }, [dayData])
 
   const summary = dayData?.summary || ''
+
+  const formatDateDisplay = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    if (dateStr === todayStr) {
+      return `今天 (${month}月${day}日 ${weekdays[date.getDay()]})`
+    }
+    return `${month}月${day}日 ${weekdays[date.getDay()]}`
+  }
 
   const handlePatchAnchorJump = (anchorId: string) => {
     const id = decodeURIComponent(anchorId)
@@ -332,10 +362,26 @@ export default function NewsDashboard() {
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
-            <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
-            <span>Linux Kernel动态</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            {availableDates.length > 0 && (
+              <select
+                value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                style={{ minWidth: '140px' }}
+              >
+                {availableDates.map(date => (
+                  <option key={date} value={date}>
+                    {formatDateDisplay(date)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
+              <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
+              <span>Linux Kernel动态</span>
+            </h1>
+          </div>
           <span className="text-sm text-slate-500">共 {articles.length} 篇</span>
         </div>
 

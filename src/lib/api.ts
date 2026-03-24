@@ -60,15 +60,42 @@ export interface LKMLPatch {
 }
 
 export const dayDataApi = {
-  getLatestData: async (): Promise<DayData | null> => {
+  getAvailableDates: async (): Promise<string[]> => {
     try {
-      const response = await fetch('/linux kernel-2026-03-24.json')
+      const response = await fetch('/dates.json')
+      if (response.ok) {
+        const data = await response.json()
+        return data.dates || []
+      }
+      return []
+    } catch (error) {
+      console.error('获取日期列表失败:', error)
+      return []
+    }
+  },
+
+  getDataByDate: async (dateStr: string): Promise<DayData | null> => {
+    try {
+      const response = await fetch(`/linux kernel-${dateStr}.json`)
       if (response.ok) {
         return await response.json()
       }
       return null
     } catch (error) {
       console.error('读取数据失败:', error)
+      return null
+    }
+  },
+
+  getLatestData: async (): Promise<DayData | null> => {
+    try {
+      const dates = await dayDataApi.getAvailableDates()
+      if (dates.length === 0) return null
+      
+      const latestDate = dates[0]
+      return await dayDataApi.getDataByDate(latestDate)
+    } catch (error) {
+      console.error('读取最新数据失败:', error)
       return null
     }
   }
