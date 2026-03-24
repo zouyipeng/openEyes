@@ -182,9 +182,35 @@ openEyes/
 └── README.md
 ```
 
-## 📄 数据格式
+## 📡 API 访问
 
-### 补丁数据文件 (public/linux kernel-YYYY-MM-DD.json)
+### 按日期访问数据
+
+应用支持通过日期选择器访问不同日期的补丁数据：
+
+1. **获取可用日期列表**
+   ```typescript
+   // API: GET /dates.json
+   const dates = await dayDataApi.getAvailableDates()
+   // 返回: ["2026-03-24", "2026-03-22", "2026-03-21"]
+   ```
+
+2. **获取指定日期的数据**
+   ```typescript
+   // API: GET /linux kernel-{date}.json
+   const data = await dayDataApi.getDataByDate('2026-03-24')
+   // 返回: DayData对象
+   ```
+
+3. **获取最新数据**
+   ```typescript
+   // 自动获取最新日期的数据
+   const latestData = await dayDataApi.getLatestData()
+   ```
+
+### 数据文件格式
+
+#### 补丁数据文件 (public/linux kernel-YYYY-MM-DD.json)
 
 ```json
 {
