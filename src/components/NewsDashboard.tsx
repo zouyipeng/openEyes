@@ -178,11 +178,15 @@ function LkmlGroupedList({
   )
 }
 
-export default function NewsDashboard() {
+interface NewsDashboardProps {
+  initialDate?: string
+}
+
+export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
   const [dayData, setDayData] = useState<DayData | null>(null)
   const [loading, setLoading] = useState(true)
   const [availableDates, setAvailableDates] = useState<string[]>([])
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate || '')
   const [expandedTypeMap, setExpandedTypeMap] = useState<Record<string, boolean>>({})
   const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null)
 

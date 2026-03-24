@@ -186,27 +186,36 @@ openEyes/
 
 ### 按日期访问数据
 
-应用支持通过日期选择器访问不同日期的补丁数据：
+应用支持多种方式访问不同日期的补丁数据：
 
-1. **获取可用日期列表**
-   ```typescript
-   // API: GET /dates.json
-   const dates = await dayDataApi.getAvailableDates()
-   // 返回: ["2026-03-24", "2026-03-22", "2026-03-21"]
-   ```
+#### 1. URL路径访问（推荐）
 
-2. **获取指定日期的数据**
-   ```typescript
-   // API: GET /linux kernel-{date}.json
-   const data = await dayDataApi.getDataByDate('2026-03-24')
-   // 返回: DayData对象
-   ```
+直接通过URL路径访问特定日期的数据：
 
-3. **获取最新数据**
-   ```typescript
-   // 自动获取最新日期的数据
-   const latestData = await dayDataApi.getLatestData()
-   ```
+```
+https://localhost:3000/2026-03-24    # 访问2026-03-24的补丁数据
+https://localhost:3000/2026-03-22    # 访问2026-03-22的补丁数据
+https://localhost:3000/2026-03-21    # 访问2026-03-21的补丁数据
+```
+
+#### 2. 日期选择器
+
+在页面顶部使用日期下拉选择器切换不同日期的数据。
+
+#### 3. 编程接口
+
+```typescript
+// 获取可用日期列表
+const dates = await dayDataApi.getAvailableDates()
+// 返回: ["2026-03-24", "2026-03-22", "2026-03-21"]
+
+// 获取指定日期的数据
+const data = await dayDataApi.getDataByDate('2026-03-24')
+// 返回: DayData对象
+
+// 获取最新数据
+const latestData = await dayDataApi.getLatestData()
+```
 
 ### 数据文件格式
 
