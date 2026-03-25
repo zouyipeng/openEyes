@@ -35,7 +35,14 @@ function sortGitCommits(articles: any[]) {
   })
 }
 
-function CombinedStatsBar({ lkmlCount, gitCount, gitAdditions, gitDeletions }: { lkmlCount: number; gitCount: number; gitAdditions: number; gitDeletions: number }) {
+function CombinedStatsBar({ lkmlCount, gitCount, gitAdditions, gitDeletions, lkmlSourceName, gitSourceName }: { 
+  lkmlCount: number
+  gitCount: number
+  gitAdditions: number
+  gitDeletions: number
+  lkmlSourceName: string
+  gitSourceName: string
+}) {
   if (lkmlCount === 0 && gitCount === 0) return null
 
   return (
@@ -43,7 +50,7 @@ function CombinedStatsBar({ lkmlCount, gitCount, gitAdditions, gitDeletions }: {
       <div className="flex flex-wrap items-center gap-x-1 gap-y-1 sm:gap-x-0">
         {lkmlCount > 0 && (
           <>
-            <span className="text-slate-500 mr-1 sm:mr-2">LKML补丁</span>
+            <span className="text-slate-500 mr-1 sm:mr-2">{lkmlSourceName}</span>
             <span className="text-slate-900 font-medium">{lkmlCount}</span>
           </>
         )}
@@ -52,7 +59,7 @@ function CombinedStatsBar({ lkmlCount, gitCount, gitAdditions, gitDeletions }: {
         )}
         {gitCount > 0 && (
           <>
-            <span className="text-purple-600 mr-1">Git提交</span>
+            <span className="text-purple-600 mr-1">{gitSourceName}</span>
             <span className="text-slate-900 font-medium">{gitCount}</span>
             <span className="text-slate-300 mx-1 sm:mx-2">·</span>
             <span className="text-emerald-600">+{gitAdditions.toLocaleString()}</span>
@@ -209,15 +216,28 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
     return [...sortLinuxKernelArticles(lkmlArticles), ...sortGitCommits(gitArticles)]
   }, [dayData])
 
-  const lkmlCount = useMemo(() => {
-    if (!dayData?.articles) return 0
-    return dayData.articles.filter((a: any) => a.patchData).length
+  const lkmlArticles = useMemo(() => {
+    if (!dayData?.articles) return []
+    return dayData.articles.filter((a: any) => a.patchData)
   }, [dayData])
 
-  const gitCount = useMemo(() => {
-    if (!dayData?.articles) return 0
-    return dayData.articles.filter((a: any) => a.gitCommitData).length
+  const gitArticles = useMemo(() => {
+    if (!dayData?.articles) return []
+    return dayData.articles.filter((a: any) => a.gitCommitData)
   }, [dayData])
+
+  const lkmlSourceName = useMemo(() => {
+    if (lkmlArticles.length > 0) return lkmlArticles[0].sourceName || 'LKML'
+    return 'LKML'
+  }, [lkmlArticles])
+
+  const gitSourceName = useMemo(() => {
+    if (gitArticles.length > 0) return gitArticles[0].sourceName || 'Git'
+    return 'Git'
+  }, [gitArticles])
+
+  const lkmlCount = lkmlArticles.length
+  const gitCount = gitArticles.length
 
   const summary = dayData?.summary || ''
 
@@ -404,6 +424,8 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
               gitCount={gitCount}
               gitAdditions={articles.reduce((sum: number, a: any) => sum + (a.gitCommitData?.additions || 0), 0)}
               gitDeletions={articles.reduce((sum: number, a: any) => sum + (a.gitCommitData?.deletions || 0), 0)}
+              lkmlSourceName={lkmlSourceName}
+              gitSourceName={gitSourceName}
             />
             <LkmlGroupedList
               articles={articles}
