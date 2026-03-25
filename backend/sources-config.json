@@ -16,7 +16,7 @@
   "sources": [
     {
       "id": "lkml-today",
-      "name": "Linux Kernel Mailing List",
+      "name": "Mailing List",
       "type": "lkml",
       "url": "https://lkml.org/",
       "category": "linux kernel",
@@ -27,7 +27,7 @@
     },
     {
       "id": "linux-kernel-git",
-      "name": "Linux Kernel Git Mainline",
+      "name": "Mainline",
       "type": "git",
       "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git",
       "category": "git-commit",

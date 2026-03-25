@@ -108,7 +108,10 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
       >
         <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-[12px] leading-5">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 bg-purple-100 text-purple-700">
+            <span className="px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 bg-purple-100 text-purple-700" title={article.sourceName}>
+              {article.sourceName}
+            </span>
+            <span className="px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 bg-slate-100 text-slate-600">
               {gitCommit.shortHash}
             </span>
             <span
@@ -188,6 +191,9 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
     >
       <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-[12px] leading-5">
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 bg-blue-100 text-blue-700" title={article.sourceName}>
+            {article.sourceName}
+          </span>
           <span
             className={`px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 ${typeColor[patch.type] || typeColor.other}`}
           >
