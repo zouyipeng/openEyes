@@ -36,7 +36,7 @@ body {
 }
 
 .lkml-collapse-content.is-open {
-  max-height: 2200px;
+  max-height: 100000px;
   opacity: 1;
 }
 

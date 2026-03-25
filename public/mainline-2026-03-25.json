@@ -1,0 +1,1739 @@
+{
+  "date": "2026-03-25",
+  "sourceName": "Mainline",
+  "sourceType": "git",
+  "generatedAt": "2026-03-25T14:15:35.208Z",
+  "summary": "# 今日社区动态\n\n## Feature速看\n- 🔍 **BPF测试增强**：添加了针对`sync_linked_regs`中zext（零扩展）传播的测试用例，确保寄存器同步时零扩展行为正确 [selftests/bpf: Add a test cases for sync_linked_regs regarding zext propagation](#lkml-art_1774439410581_nqsakymqc)\n\n- 🔒 **IPv6 SRv6安全修复**：在SRv6相关代码路径中添加了`idev`指针的NULL检查，防止潜在的空指针解引用，提升内核稳定性 [ipv6: add NULL checks for idev in SRv6 paths](#lkml-art_1774439412428_p78izia9w)\n\n- 🧪 **BPF标量处理测试**：扩展了`maybe_fork_scalars()`函数的测试覆盖，验证OR和AND操作的正确处理逻辑 [selftests/bpf: Add tests for maybe_fork_scalars() OR vs AND handling](#lkml-art_1774439410670_rcejdib1p)\n\n- ⚠️ **BPF除法边界测试**：添加了`sdiv32/smod32`指令对`INT_MIN`被除数的边界条件测试，确保除法和取模运算在极端输入下行为正确 [selftests/bpf: Add tests for sdiv32/smod32 with INT_MIN dividend](#lkml-art_1774439410763_amvro2xvc)\n\n## Bugfix\n- 🔧 **BPF异常处理修复**：修复了子程序中BPF异常退出的锁检查问题，同时添加了对应的测试用例以验证bpf_throw在子程序中的锁泄漏问题 [bpf: Fix exception exit lock checking for subprogs](#lkml-art_1774439410895_dptwommxc) [selftests/bpf: Add tests for bpf_throw lock leak from subprogs](#lkml-art_1774439410844_atgehydxb)\n\n- 🛡️ **空指针解引用修复**：修复了多个模块中的空指针解引用问题，包括ICMP标签验证、UDP隧道（IPv6配置为n时）、以及bonding驱动的调试函数中的潜在崩溃 [icmp: fix NULL pointer dereference in icmp_tag_validation()](#lkml-art_1774439411436_grayv3wve) [udp_tunnel: fix NULL deref caused by udp_sock_create6 when CONFIG_IPV6=n](#lkml-art_1774439412221_cvm5l7l0j) [net: bonding: fix NULL deref in bond_debug_rlb_hash_show](#lkml-art_1774439412181_xlnl95cxq)\n\n- 📊 **网络驱动资源泄漏修复**：修复了bcm_sf2 DSA交换机驱动在错误路径中遗漏的clk_disable_unprepare()调用，以及macb驱动中PTP时钟的use-after-free和rx_fs_lock未初始化问题 [net: dsa: bcm_sf2: fix missing clk_disable_unprepare() in error paths](#lkml-art_1774439411477_mz9y87z2u) [net: macb: fix uninitialized rx_fs_lock](#lkml-art_1774439412511_u6qfzj9dl) [net: macb: fix use-after-free access to PTP clock](#lkml-art_1774439412552_svcewed7a)\n\n- 🐛 **BPF解释器稳定性修复**：修复了INT_MIN整数溢出导致的未定义行为问题（sdiv/smod指令），以及BPF_OR操作中maybe_fork_scalars()的标量分裂问题，同时修正了BPF_ADD_CONST32零扩展传播中的sync_linked_regs逻辑 [bpf: Fix undefined behavior in interpreter sdiv/smod for INT_MIN](#lkml-art_1774439410803_44eqrdjvi) [bpf: Fix unsound scalar forking in maybe_fork_scalars() for BPF_OR](#lkml-art_1774439410721_gu884ewt1) [bpf: Fix sync_linked_regs regarding BPF_ADD_CONST32 zext propagation](#lkml-art_1774439410628_bkacf32bt)\n\n- 📁 **文件描述符和缓冲区修复**：修复了bootconfig工具在fstat失败时load_xbc_file()的文件描述符泄漏问题，以及io_uring在EOF时增量缓冲区的BUF_MORE标志缺失问题 [tools/bootconfig: fix fd leak in load_xbc_file() on fstat failure](#lkml-art_1774439412632_btb6tn9jx) [io_uring/kbuf: fix missing BUF_MORE for incremental buffers at EOF](#lkml-art_1774439411268_txi0uz0k9)\n\n- ⚙️ **硬件监控驱动修复**：修复了max6639传感器的脉冲每转实现，以及isl68137 PMBus驱动中未检查的返回值问题并改用sysfs_emit()进行输出 [hwmon: (max6639) Fix pulses-per-revolution implementation](#lkml-art_1774439410936_e5gmyazuq) [hwmon: (pmbus/isl68137) Fix unchecked return value and use sysfs_emit()](#lkml-art_1774439412753_1gkmynvth)\n\n- 🏗️ **ARM64和显存修复**：修复了ARM64 realm中52位物理地址支持的PTE_NS_SHARED标志问题，以及drm/xe驱动中CCS模式存储时遗漏的运行时PM引用和LRC上下文时间戳捕获中的未初始化问题 [arm64: realm: Fix PTE_NS_SHARED for 52bit PA support](#lkml-art_1774439411975_lc4g5zu4r) [drm/xe: Fix missing runtime PM reference in ccs_mode_store](#lkml-art_1774439411355_izp34mnrg) [drm/xe/lrc: Fix uninitialized new_ts when capturing context timestamp](#lkml-art_1774439411560_geuf5hynp)\n\n## Other\n共 33 条其他类型补丁（文档更新、代码整理等）",
+  "articles": [
+    {
+      "id": "art_1774439410285_wtfdv9a8s",
+      "sourceName": "Mainline",
+      "title": "Linux 7.0-rc5",
+      "content": "提交: c369299\n作者: Linus Torvalds <torvalds@linux-foundation.org>\n日期: 2026-03-22T14:42:17-07:00\n标题: Linux 7.0-rc5\n修改的文件:\n- Makefile\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c369299895a591d96745d6492d4888259b004a9e",
+      "author": "Linus Torvalds",
+      "fetchedAt": "2026-03-25T11:50:10.285Z",
+      "gitCommitData": {
+        "hash": "c369299895a591d96745d6492d4888259b004a9e",
+        "shortHash": "c369299",
+        "title": "Linux 7.0-rc5",
+        "author": "Linus Torvalds",
+        "authorEmail": "torvalds@linux-foundation.org",
+        "date": "2026-03-22T14:42:17-07:00",
+        "content": "提交: c369299\n作者: Linus Torvalds <torvalds@linux-foundation.org>\n日期: 2026-03-22T14:42:17-07:00\n标题: Linux 7.0-rc5\n修改的文件:\n- Makefile\n统计: +1 -1",
+        "files": [
+          "Makefile"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c369299895a591d96745d6492d4888259b004a9e"
+      }
+    },
+    {
+      "id": "art_1774439410977_a5vivd9ha",
+      "sourceName": "Mainline",
+      "title": "x86/platform/uv: Handle deconfigured sockets",
+      "content": "提交: 1f6aa5b\n作者: Kyle Meyer <kyle.meyer@hpe.com>\n日期: 2026-03-20T12:19:20-05:00\n标题: x86/platform/uv: Handle deconfigured sockets\n修改的文件:\n- arch/x86/kernel/apic/x2apic_uv_x.c\n统计: +16 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1f6aa5bbf1d0f81a8a2aafc16136e7dd9a609ff3",
+      "author": "Kyle Meyer",
+      "fetchedAt": "2026-03-25T11:50:10.977Z",
+      "gitCommitData": {
+        "hash": "1f6aa5bbf1d0f81a8a2aafc16136e7dd9a609ff3",
+        "shortHash": "1f6aa5b",
+        "title": "x86/platform/uv: Handle deconfigured sockets",
+        "author": "Kyle Meyer",
+        "authorEmail": "kyle.meyer@hpe.com",
+        "date": "2026-03-20T12:19:20-05:00",
+        "content": "提交: 1f6aa5b\n作者: Kyle Meyer <kyle.meyer@hpe.com>\n日期: 2026-03-20T12:19:20-05:00\n标题: x86/platform/uv: Handle deconfigured sockets\n修改的文件:\n- arch/x86/kernel/apic/x2apic_uv_x.c\n统计: +16 -2",
+        "files": [
+          "arch/x86/kernel/apic/x2apic_uv_x.c"
+        ],
+        "additions": 16,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=1f6aa5bbf1d0f81a8a2aafc16136e7dd9a609ff3"
+      }
+    },
+    {
+      "id": "art_1774439411017_9i1r9pcbs",
+      "sourceName": "Mainline",
+      "title": "x86/entry/vdso: Fix path of included gettimeofday.c",
+      "content": "提交: 63f8b60\n作者: Vladimir Oltean <vladimir.oltean@nxp.com>\n日期: 2026-03-20T17:06:53+01:00\n标题: x86/entry/vdso: Fix path of included gettimeofday.c\n修改的文件:\n- arch/x86/entry/vdso/common/vclock_gettime.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=63f8b60151dc00895137bfadc987f258060ab264",
+      "author": "Vladimir Oltean",
+      "fetchedAt": "2026-03-25T11:50:11.017Z",
+      "gitCommitData": {
+        "hash": "63f8b60151dc00895137bfadc987f258060ab264",
+        "shortHash": "63f8b60",
+        "title": "x86/entry/vdso: Fix path of included gettimeofday.c",
+        "author": "Vladimir Oltean",
+        "authorEmail": "vladimir.oltean@nxp.com",
+        "date": "2026-03-20T17:06:53+01:00",
+        "content": "提交: 63f8b60\n作者: Vladimir Oltean <vladimir.oltean@nxp.com>\n日期: 2026-03-20T17:06:53+01:00\n标题: x86/entry/vdso: Fix path of included gettimeofday.c\n修改的文件:\n- arch/x86/entry/vdso/common/vclock_gettime.c\n统计: +1 -1",
+        "files": [
+          "arch/x86/entry/vdso/common/vclock_gettime.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=63f8b60151dc00895137bfadc987f258060ab264"
+      }
+    },
+    {
+      "id": "art_1774439410936_e5gmyazuq",
+      "sourceName": "Mainline",
+      "title": "hwmon: (max6639) Fix pulses-per-revolution implementation",
+      "content": "提交: e7bae9a\n作者: Guenter Roeck <linux@roeck-us.net>\n日期: 2026-03-19T21:31:22-07:00\n标题: hwmon: (max6639) Fix pulses-per-revolution implementation\n修改的文件:\n- drivers/hwmon/max6639.c\n统计: +5 -5",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e7bae9a7a5e1251ab414291f4e9304d702bb9221",
+      "author": "Guenter Roeck",
+      "fetchedAt": "2026-03-25T11:50:10.936Z",
+      "gitCommitData": {
+        "hash": "e7bae9a7a5e1251ab414291f4e9304d702bb9221",
+        "shortHash": "e7bae9a",
+        "title": "hwmon: (max6639) Fix pulses-per-revolution implementation",
+        "author": "Guenter Roeck",
+        "authorEmail": "linux@roeck-us.net",
+        "date": "2026-03-19T21:31:22-07:00",
+        "content": "提交: e7bae9a\n作者: Guenter Roeck <linux@roeck-us.net>\n日期: 2026-03-19T21:31:22-07:00\n标题: hwmon: (max6639) Fix pulses-per-revolution implementation\n修改的文件:\n- drivers/hwmon/max6639.c\n统计: +5 -5",
+        "files": [
+          "drivers/hwmon/max6639.c"
+        ],
+        "additions": 5,
+        "deletions": 5,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e7bae9a7a5e1251ab414291f4e9304d702bb9221"
+      }
+    },
+    {
+      "id": "art_1774439411058_7x3hz3iak",
+      "sourceName": "Mainline",
+      "title": "ata: libata-scsi: report correct sense field pointer in ata_scsiop_maint_in()",
+      "content": "提交: e6d7eba\n作者: Damien Le Moal <dlemoal@kernel.org>\n日期: 2026-03-20T12:48:01+09:00\n标题: ata: libata-scsi: report correct sense field pointer in ata_scsiop_maint_in()\n修改的文件:\n- drivers/ata/libata-scsi.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e6d7eba23b666d85cacee0643be280d6ce1ebffc",
+      "author": "Damien Le Moal",
+      "fetchedAt": "2026-03-25T11:50:11.058Z",
+      "gitCommitData": {
+        "hash": "e6d7eba23b666d85cacee0643be280d6ce1ebffc",
+        "shortHash": "e6d7eba",
+        "title": "ata: libata-scsi: report correct sense field pointer in ata_scsiop_maint_in()",
+        "author": "Damien Le Moal",
+        "authorEmail": "dlemoal@kernel.org",
+        "date": "2026-03-20T12:48:01+09:00",
+        "content": "提交: e6d7eba\n作者: Damien Le Moal <dlemoal@kernel.org>\n日期: 2026-03-20T12:48:01+09:00\n标题: ata: libata-scsi: report correct sense field pointer in ata_scsiop_maint_in()\n修改的文件:\n- drivers/ata/libata-scsi.c\n统计: +1 -1",
+        "files": [
+          "drivers/ata/libata-scsi.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e6d7eba23b666d85cacee0643be280d6ce1ebffc"
+      }
+    },
+    {
+      "id": "art_1774439410844_atgehydxb",
+      "sourceName": "Mainline",
+      "title": "selftests/bpf: Add tests for bpf_throw lock leak from subprogs",
+      "content": "提交: a1e5c46\n作者: Ihor Solodrai <ihor.solodrai@linux.dev>\n日期: 2026-03-19T17:08:09-07:00\n标题: selftests/bpf: Add tests for bpf_throw lock leak from subprogs\n修改的文件:\n- tools/testing/selftests/bpf/progs/exceptions_fail.c\n统计: +47 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a1e5c46eaed3151be93e1aec9af0d8f8db79b8f6",
+      "author": "Ihor Solodrai",
+      "fetchedAt": "2026-03-25T11:50:10.844Z",
+      "gitCommitData": {
+        "hash": "a1e5c46eaed3151be93e1aec9af0d8f8db79b8f6",
+        "shortHash": "a1e5c46",
+        "title": "selftests/bpf: Add tests for bpf_throw lock leak from subprogs",
+        "author": "Ihor Solodrai",
+        "authorEmail": "ihor.solodrai@linux.dev",
+        "date": "2026-03-19T17:08:09-07:00",
+        "content": "提交: a1e5c46\n作者: Ihor Solodrai <ihor.solodrai@linux.dev>\n日期: 2026-03-19T17:08:09-07:00\n标题: selftests/bpf: Add tests for bpf_throw lock leak from subprogs\n修改的文件:\n- tools/testing/selftests/bpf/progs/exceptions_fail.c\n统计: +47 -0",
+        "files": [
+          "tools/testing/selftests/bpf/progs/exceptions_fail.c"
+        ],
+        "additions": 47,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a1e5c46eaed3151be93e1aec9af0d8f8db79b8f6"
+      }
+    },
+    {
+      "id": "art_1774439410895_dptwommxc",
+      "sourceName": "Mainline",
+      "title": "bpf: Fix exception exit lock checking for subprogs",
+      "content": "提交: 6c21285\n作者: Ihor Solodrai <ihor.solodrai@linux.dev>\n日期: 2026-03-19T17:08:08-07:00\n标题: bpf: Fix exception exit lock checking for subprogs\n修改的文件:\n- kernel/bpf/verifier.c\n- tools/testing/selftests/bpf/progs/exceptions_fail.c\n统计: +8 -4",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=6c2128505f61b504c79a20b89596feba61388112",
+      "author": "Ihor Solodrai",
+      "fetchedAt": "2026-03-25T11:50:10.895Z",
+      "gitCommitData": {
+        "hash": "6c2128505f61b504c79a20b89596feba61388112",
+        "shortHash": "6c21285",
+        "title": "bpf: Fix exception exit lock checking for subprogs",
+        "author": "Ihor Solodrai",
+        "authorEmail": "ihor.solodrai@linux.dev",
+        "date": "2026-03-19T17:08:08-07:00",
+        "content": "提交: 6c21285\n作者: Ihor Solodrai <ihor.solodrai@linux.dev>\n日期: 2026-03-19T17:08:08-07:00\n标题: bpf: Fix exception exit lock checking for subprogs\n修改的文件:\n- kernel/bpf/verifier.c\n- tools/testing/selftests/bpf/progs/exceptions_fail.c\n统计: +8 -4",
+        "files": [
+          "kernel/bpf/verifier.c",
+          "tools/testing/selftests/bpf/progs/exceptions_fail.c"
+        ],
+        "additions": 8,
+        "deletions": 4,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=6c2128505f61b504c79a20b89596feba61388112"
+      }
+    },
+    {
+      "id": "art_1774439410581_nqsakymqc",
+      "sourceName": "Mainline",
+      "title": "selftests/bpf: Add a test cases for sync_linked_regs regarding zext propagation",
+      "content": "提交: 4a04d13\n作者: Daniel Borkmann <daniel@iogearbox.net>\n日期: 2026-03-19T22:15:07+01:00\n标题: selftests/bpf: Add a test cases for sync_linked_regs regarding zext propagation\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_linked_scalars.c\n统计: +108 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=4a04d13576fd69149b91672b5f1dc62eca272fa5",
+      "author": "Daniel Borkmann",
+      "fetchedAt": "2026-03-25T11:50:10.581Z",
+      "gitCommitData": {
+        "hash": "4a04d13576fd69149b91672b5f1dc62eca272fa5",
+        "shortHash": "4a04d13",
+        "title": "selftests/bpf: Add a test cases for sync_linked_regs regarding zext propagation",
+        "author": "Daniel Borkmann",
+        "authorEmail": "daniel@iogearbox.net",
+        "date": "2026-03-19T22:15:07+01:00",
+        "content": "提交: 4a04d13\n作者: Daniel Borkmann <daniel@iogearbox.net>\n日期: 2026-03-19T22:15:07+01:00\n标题: selftests/bpf: Add a test cases for sync_linked_regs regarding zext propagation\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_linked_scalars.c\n统计: +108 -0",
+        "files": [
+          "tools/testing/selftests/bpf/progs/verifier_linked_scalars.c"
+        ],
+        "additions": 108,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "feature",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=4a04d13576fd69149b91672b5f1dc62eca272fa5"
+      }
+    },
+    {
+      "id": "art_1774439410628_bkacf32bt",
+      "sourceName": "Mainline",
+      "title": "bpf: Fix sync_linked_regs regarding BPF_ADD_CONST32 zext propagation",
+      "content": "提交: bc308be\n作者: Daniel Borkmann <daniel@iogearbox.net>\n日期: 2026-03-19T22:15:06+01:00\n标题: bpf: Fix sync_linked_regs regarding BPF_ADD_CONST32 zext propagation\n修改的文件:\n- kernel/bpf/verifier.c\n统计: +15 -6",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=bc308be380c136800e1e94c6ce49cb53141d6506",
+      "author": "Daniel Borkmann",
+      "fetchedAt": "2026-03-25T11:50:10.628Z",
+      "gitCommitData": {
+        "hash": "bc308be380c136800e1e94c6ce49cb53141d6506",
+        "shortHash": "bc308be",
+        "title": "bpf: Fix sync_linked_regs regarding BPF_ADD_CONST32 zext propagation",
+        "author": "Daniel Borkmann",
+        "authorEmail": "daniel@iogearbox.net",
+        "date": "2026-03-19T22:15:06+01:00",
+        "content": "提交: bc308be\n作者: Daniel Borkmann <daniel@iogearbox.net>\n日期: 2026-03-19T22:15:06+01:00\n标题: bpf: Fix sync_linked_regs regarding BPF_ADD_CONST32 zext propagation\n修改的文件:\n- kernel/bpf/verifier.c\n统计: +15 -6",
+        "files": [
+          "kernel/bpf/verifier.c"
+        ],
+        "additions": 15,
+        "deletions": 6,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=bc308be380c136800e1e94c6ce49cb53141d6506"
+      }
+    },
+    {
+      "id": "art_1774439411224_6tiakwyhs",
+      "sourceName": "Mainline",
+      "title": "io_uring/kbuf: propagate BUF_MORE through early buffer commit path",
+      "content": "提交: 418eab7\n作者: Jens Axboe <axboe@kernel.dk>\n日期: 2026-03-19T14:29:20-06:00\n标题: io_uring/kbuf: propagate BUF_MORE through early buffer commit path\n修改的文件:\n- include/linux/io_uring_types.h\n- io_uring/kbuf.c\n统计: +10 -3",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=418eab7a6f3c002d8e64d6e95ec27118017019af",
+      "author": "Jens Axboe",
+      "fetchedAt": "2026-03-25T11:50:11.224Z",
+      "gitCommitData": {
+        "hash": "418eab7a6f3c002d8e64d6e95ec27118017019af",
+        "shortHash": "418eab7",
+        "title": "io_uring/kbuf: propagate BUF_MORE through early buffer commit path",
+        "author": "Jens Axboe",
+        "authorEmail": "axboe@kernel.dk",
+        "date": "2026-03-19T14:29:20-06:00",
+        "content": "提交: 418eab7\n作者: Jens Axboe <axboe@kernel.dk>\n日期: 2026-03-19T14:29:20-06:00\n标题: io_uring/kbuf: propagate BUF_MORE through early buffer commit path\n修改的文件:\n- include/linux/io_uring_types.h\n- io_uring/kbuf.c\n统计: +10 -3",
+        "files": [
+          "include/linux/io_uring_types.h",
+          "io_uring/kbuf.c"
+        ],
+        "additions": 10,
+        "deletions": 3,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=418eab7a6f3c002d8e64d6e95ec27118017019af"
+      }
+    },
+    {
+      "id": "art_1774439411268_txi0uz0k9",
+      "sourceName": "Mainline",
+      "title": "io_uring/kbuf: fix missing BUF_MORE for incremental buffers at EOF",
+      "content": "提交: 3ecd3e0\n作者: Jens Axboe <axboe@kernel.dk>\n日期: 2026-03-19T14:29:09-06:00\n标题: io_uring/kbuf: fix missing BUF_MORE for incremental buffers at EOF\n修改的文件:\n- io_uring/kbuf.c\n统计: +4 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3ecd3e03144b38a21a3b70254f1b9d2e16629b09",
+      "author": "Jens Axboe",
+      "fetchedAt": "2026-03-25T11:50:11.268Z",
+      "gitCommitData": {
+        "hash": "3ecd3e03144b38a21a3b70254f1b9d2e16629b09",
+        "shortHash": "3ecd3e0",
+        "title": "io_uring/kbuf: fix missing BUF_MORE for incremental buffers at EOF",
+        "author": "Jens Axboe",
+        "authorEmail": "axboe@kernel.dk",
+        "date": "2026-03-19T14:29:09-06:00",
+        "content": "提交: 3ecd3e0\n作者: Jens Axboe <axboe@kernel.dk>\n日期: 2026-03-19T14:29:09-06:00\n标题: io_uring/kbuf: fix missing BUF_MORE for incremental buffers at EOF\n修改的文件:\n- io_uring/kbuf.c\n统计: +4 -0",
+        "files": [
+          "io_uring/kbuf.c"
+        ],
+        "additions": 4,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3ecd3e03144b38a21a3b70254f1b9d2e16629b09"
+      }
+    },
+    {
+      "id": "art_1774439411396_1n87umnly",
+      "sourceName": "Mainline",
+      "title": "MPTCP: fix lock class name family in pm_nl_create_listen_socket",
+      "content": "提交: 7ab4a7c\n作者: Li Xiasong <lixiasong1@huawei.com>\n日期: 2026-03-19T19:21:59+08:00\n标题: MPTCP: fix lock class name family in pm_nl_create_listen_socket\n修改的文件:\n- net/mptcp/pm_kernel.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7ab4a7c5d969642782b8a5b608da0dd02aa9f229",
+      "author": "Li Xiasong",
+      "fetchedAt": "2026-03-25T11:50:11.396Z",
+      "gitCommitData": {
+        "hash": "7ab4a7c5d969642782b8a5b608da0dd02aa9f229",
+        "shortHash": "7ab4a7c",
+        "title": "MPTCP: fix lock class name family in pm_nl_create_listen_socket",
+        "author": "Li Xiasong",
+        "authorEmail": "lixiasong1@huawei.com",
+        "date": "2026-03-19T19:21:59+08:00",
+        "content": "提交: 7ab4a7c\n作者: Li Xiasong <lixiasong1@huawei.com>\n日期: 2026-03-19T19:21:59+08:00\n标题: MPTCP: fix lock class name family in pm_nl_create_listen_socket\n修改的文件:\n- net/mptcp/pm_kernel.c\n统计: +1 -1",
+        "files": [
+          "net/mptcp/pm_kernel.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7ab4a7c5d969642782b8a5b608da0dd02aa9f229"
+      }
+    },
+    {
+      "id": "art_1774439410411_5zwwn2bf6",
+      "sourceName": "Mainline",
+      "title": "ring-buffer: Fix to update per-subbuf entries of persistent ring buffer",
+      "content": "提交: f35dbac\n作者: Masami Hiramatsu (Google) <mhiramat@kernel.org>\n日期: 2026-03-19T18:12:19+09:00\n标题: ring-buffer: Fix to update per-subbuf entries of persistent ring buffer\n修改的文件:\n- kernel/trace/ring_buffer.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=f35dbac6942171dc4ce9398d1d216a59224590a9",
+      "author": "Masami Hiramatsu (Google)",
+      "fetchedAt": "2026-03-25T11:50:10.411Z",
+      "gitCommitData": {
+        "hash": "f35dbac6942171dc4ce9398d1d216a59224590a9",
+        "shortHash": "f35dbac",
+        "title": "ring-buffer: Fix to update per-subbuf entries of persistent ring buffer",
+        "author": "Masami Hiramatsu (Google)",
+        "authorEmail": "mhiramat@kernel.org",
+        "date": "2026-03-19T18:12:19+09:00",
+        "content": "提交: f35dbac\n作者: Masami Hiramatsu (Google) <mhiramat@kernel.org>\n日期: 2026-03-19T18:12:19+09:00\n标题: ring-buffer: Fix to update per-subbuf entries of persistent ring buffer\n修改的文件:\n- kernel/trace/ring_buffer.c\n统计: +1 -1",
+        "files": [
+          "kernel/trace/ring_buffer.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=f35dbac6942171dc4ce9398d1d216a59224590a9"
+      }
+    },
+    {
+      "id": "art_1774439412057_1h0o54bq2",
+      "sourceName": "Mainline",
+      "title": "nfnetlink_osf: validate individual option lengths in fingerprints",
+      "content": "提交: dbdfaae\n作者: Weiming Shi <bestswngs@gmail.com>\n日期: 2026-03-19T15:32:44+08:00\n标题: nfnetlink_osf: validate individual option lengths in fingerprints\n修改的文件:\n- net/netfilter/nfnetlink_osf.c\n统计: +13 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=dbdfaae9609629a9569362e3b8f33d0a20fd783c",
+      "author": "Weiming Shi",
+      "fetchedAt": "2026-03-25T11:50:12.057Z",
+      "gitCommitData": {
+        "hash": "dbdfaae9609629a9569362e3b8f33d0a20fd783c",
+        "shortHash": "dbdfaae",
+        "title": "nfnetlink_osf: validate individual option lengths in fingerprints",
+        "author": "Weiming Shi",
+        "authorEmail": "bestswngs@gmail.com",
+        "date": "2026-03-19T15:32:44+08:00",
+        "content": "提交: dbdfaae\n作者: Weiming Shi <bestswngs@gmail.com>\n日期: 2026-03-19T15:32:44+08:00\n标题: nfnetlink_osf: validate individual option lengths in fingerprints\n修改的文件:\n- net/netfilter/nfnetlink_osf.c\n统计: +13 -0",
+        "files": [
+          "net/netfilter/nfnetlink_osf.c"
+        ],
+        "additions": 13,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=dbdfaae9609629a9569362e3b8f33d0a20fd783c"
+      }
+    },
+    {
+      "id": "art_1774439411315_x9jdvrk8k",
+      "sourceName": "Mainline",
+      "title": "smb: client: fix generic/694 due to wrong ->i_blocks",
+      "content": "提交: 23b5df0\n作者: Paulo Alcantara <pc@manguebit.org>\n日期: 2026-03-18T21:43:51-03:00\n标题: smb: client: fix generic/694 due to wrong ->i_blocks\n修改的文件:\n- fs/smb/client/cifsglob.h\n- fs/smb/client/file.c\n- fs/smb/client/inode.c\n- fs/smb/client/smb2ops.c\n统计: +16 -32",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=23b5df09c27aec13962b30d32a4167ebdd043f8e",
+      "author": "Paulo Alcantara",
+      "fetchedAt": "2026-03-25T11:50:11.315Z",
+      "gitCommitData": {
+        "hash": "23b5df09c27aec13962b30d32a4167ebdd043f8e",
+        "shortHash": "23b5df0",
+        "title": "smb: client: fix generic/694 due to wrong ->i_blocks",
+        "author": "Paulo Alcantara",
+        "authorEmail": "pc@manguebit.org",
+        "date": "2026-03-18T21:43:51-03:00",
+        "content": "提交: 23b5df0\n作者: Paulo Alcantara <pc@manguebit.org>\n日期: 2026-03-18T21:43:51-03:00\n标题: smb: client: fix generic/694 due to wrong ->i_blocks\n修改的文件:\n- fs/smb/client/cifsglob.h\n- fs/smb/client/file.c\n- fs/smb/client/inode.c\n- fs/smb/client/smb2ops.c\n统计: +16 -32",
+        "files": [
+          "fs/smb/client/cifsglob.h",
+          "fs/smb/client/file.c",
+          "fs/smb/client/inode.c",
+          "fs/smb/client/smb2ops.c"
+        ],
+        "additions": 16,
+        "deletions": 32,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=23b5df09c27aec13962b30d32a4167ebdd043f8e"
+      }
+    },
+    {
+      "id": "art_1774439412632_btb6tn9jx",
+      "sourceName": "Mainline",
+      "title": "tools/bootconfig: fix fd leak in load_xbc_file() on fstat failure",
+      "content": "提交: 3b2c2ab\n作者: Josh Law <objecting@objecting.org>\n日期: 2026-03-19T08:43:06+09:00\n标题: tools/bootconfig: fix fd leak in load_xbc_file() on fstat failure\n修改的文件:\n- tools/bootconfig/main.c\n统计: +5 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3b2c2ab4ceb82af484310c3087541eab00ea288b",
+      "author": "Josh Law",
+      "fetchedAt": "2026-03-25T11:50:12.632Z",
+      "gitCommitData": {
+        "hash": "3b2c2ab4ceb82af484310c3087541eab00ea288b",
+        "shortHash": "3b2c2ab",
+        "title": "tools/bootconfig: fix fd leak in load_xbc_file() on fstat failure",
+        "author": "Josh Law",
+        "authorEmail": "objecting@objecting.org",
+        "date": "2026-03-19T08:43:06+09:00",
+        "content": "提交: 3b2c2ab\n作者: Josh Law <objecting@objecting.org>\n日期: 2026-03-19T08:43:06+09:00\n标题: tools/bootconfig: fix fd leak in load_xbc_file() on fstat failure\n修改的文件:\n- tools/bootconfig/main.c\n统计: +5 -2",
+        "files": [
+          "tools/bootconfig/main.c"
+        ],
+        "additions": 5,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3b2c2ab4ceb82af484310c3087541eab00ea288b"
+      }
+    },
+    {
+      "id": "art_1774439412672_sysaekkzf",
+      "sourceName": "Mainline",
+      "title": "lib/bootconfig: check xbc_init_node() return in override path",
+      "content": "提交: bb288d7\n作者: Josh Law <objecting@objecting.org>\n日期: 2026-03-19T08:43:05+09:00\n标题: lib/bootconfig: check xbc_init_node() return in override path\n修改的文件:\n- lib/bootconfig.c\n统计: +2 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=bb288d7d869e86d382f35a0e26242c5ccb05ca82",
+      "author": "Josh Law",
+      "fetchedAt": "2026-03-25T11:50:12.672Z",
+      "gitCommitData": {
+        "hash": "bb288d7d869e86d382f35a0e26242c5ccb05ca82",
+        "shortHash": "bb288d7",
+        "title": "lib/bootconfig: check xbc_init_node() return in override path",
+        "author": "Josh Law",
+        "authorEmail": "objecting@objecting.org",
+        "date": "2026-03-19T08:43:05+09:00",
+        "content": "提交: bb288d7\n作者: Josh Law <objecting@objecting.org>\n日期: 2026-03-19T08:43:05+09:00\n标题: lib/bootconfig: check xbc_init_node() return in override path\n修改的文件:\n- lib/bootconfig.c\n统计: +2 -1",
+        "files": [
+          "lib/bootconfig.c"
+        ],
+        "additions": 2,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=bb288d7d869e86d382f35a0e26242c5ccb05ca82"
+      }
+    },
+    {
+      "id": "art_1774439410454_15toj3qmq",
+      "sourceName": "Mainline",
+      "title": "tracing: Fix trace_marker copy link list updates",
+      "content": "提交: 07183aa\n作者: Steven Rostedt <rostedt@goodmis.org>\n日期: 2026-03-18T18:55:12-04:00\n标题: tracing: Fix trace_marker copy link list updates\n修改的文件:\n- kernel/trace/trace.c\n统计: +10 -9",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=07183aac4a6828e474f00b37c9d795d0d99e18a7",
+      "author": "Steven Rostedt",
+      "fetchedAt": "2026-03-25T11:50:10.454Z",
+      "gitCommitData": {
+        "hash": "07183aac4a6828e474f00b37c9d795d0d99e18a7",
+        "shortHash": "07183aa",
+        "title": "tracing: Fix trace_marker copy link list updates",
+        "author": "Steven Rostedt",
+        "authorEmail": "rostedt@goodmis.org",
+        "date": "2026-03-18T18:55:12-04:00",
+        "content": "提交: 07183aa\n作者: Steven Rostedt <rostedt@goodmis.org>\n日期: 2026-03-18T18:55:12-04:00\n标题: tracing: Fix trace_marker copy link list updates\n修改的文件:\n- kernel/trace/trace.c\n统计: +10 -9",
+        "files": [
+          "kernel/trace/trace.c"
+        ],
+        "additions": 10,
+        "deletions": 9,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=07183aac4a6828e474f00b37c9d795d0d99e18a7"
+      }
+    },
+    {
+      "id": "art_1774439412753_1gkmynvth",
+      "sourceName": "Mainline",
+      "title": "hwmon: (pmbus/isl68137) Fix unchecked return value and use sysfs_emit()",
+      "content": "提交: 8625955\n作者: Sanman Pradhan <psanman@juniper.net>\n日期: 2026-03-18T19:40:19Z\n标题: hwmon: (pmbus/isl68137) Fix unchecked return value and use sysfs_emit()\n修改的文件:\n- drivers/hwmon/pmbus/isl68137.c\n统计: +5 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=86259558e422b250aa6aa57163a6d759074573f5",
+      "author": "Sanman Pradhan",
+      "fetchedAt": "2026-03-25T11:50:12.753Z",
+      "gitCommitData": {
+        "hash": "86259558e422b250aa6aa57163a6d759074573f5",
+        "shortHash": "8625955",
+        "title": "hwmon: (pmbus/isl68137) Fix unchecked return value and use sysfs_emit()",
+        "author": "Sanman Pradhan",
+        "authorEmail": "psanman@juniper.net",
+        "date": "2026-03-18T19:40:19Z",
+        "content": "提交: 8625955\n作者: Sanman Pradhan <psanman@juniper.net>\n日期: 2026-03-18T19:40:19Z\n标题: hwmon: (pmbus/isl68137) Fix unchecked return value and use sysfs_emit()\n修改的文件:\n- drivers/hwmon/pmbus/isl68137.c\n统计: +5 -2",
+        "files": [
+          "drivers/hwmon/pmbus/isl68137.c"
+        ],
+        "additions": 5,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=86259558e422b250aa6aa57163a6d759074573f5"
+      }
+    },
+    {
+      "id": "art_1774439412793_4opt48vzu",
+      "sourceName": "Mainline",
+      "title": "fs/tests: exec: Remove bad test vector",
+      "content": "提交: c419275\n作者: Kees Cook <kees@kernel.org>\n日期: 2026-03-18T11:36:29-07:00\n标题: fs/tests: exec: Remove bad test vector\n修改的文件:\n- fs/tests/exec_kunit.c\n统计: +0 -3",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c4192754e836e0ffed95833509b6ada975b74418",
+      "author": "Kees Cook",
+      "fetchedAt": "2026-03-25T11:50:12.793Z",
+      "gitCommitData": {
+        "hash": "c4192754e836e0ffed95833509b6ada975b74418",
+        "shortHash": "c419275",
+        "title": "fs/tests: exec: Remove bad test vector",
+        "author": "Kees Cook",
+        "authorEmail": "kees@kernel.org",
+        "date": "2026-03-18T11:36:29-07:00",
+        "content": "提交: c419275\n作者: Kees Cook <kees@kernel.org>\n日期: 2026-03-18T11:36:29-07:00\n标题: fs/tests: exec: Remove bad test vector\n修改的文件:\n- fs/tests/exec_kunit.c\n统计: +0 -3",
+        "files": [
+          "fs/tests/exec_kunit.c"
+        ],
+        "additions": 0,
+        "deletions": 3,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c4192754e836e0ffed95833509b6ada975b74418"
+      }
+    },
+    {
+      "id": "art_1774439411436_grayv3wve",
+      "sourceName": "Mainline",
+      "title": "icmp: fix NULL pointer dereference in icmp_tag_validation()",
+      "content": "提交: 614aefe\n作者: Weiming Shi <bestswngs@gmail.com>\n日期: 2026-03-18T21:06:01+08:00\n标题: icmp: fix NULL pointer dereference in icmp_tag_validation()\n修改的文件:\n- net/ipv4/icmp.c\n统计: +3 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=614aefe56af8e13331e50220c936fc0689cf5675",
+      "author": "Weiming Shi",
+      "fetchedAt": "2026-03-25T11:50:11.436Z",
+      "gitCommitData": {
+        "hash": "614aefe56af8e13331e50220c936fc0689cf5675",
+        "shortHash": "614aefe",
+        "title": "icmp: fix NULL pointer dereference in icmp_tag_validation()",
+        "author": "Weiming Shi",
+        "authorEmail": "bestswngs@gmail.com",
+        "date": "2026-03-18T21:06:01+08:00",
+        "content": "提交: 614aefe\n作者: Weiming Shi <bestswngs@gmail.com>\n日期: 2026-03-18T21:06:01+08:00\n标题: icmp: fix NULL pointer dereference in icmp_tag_validation()\n修改的文件:\n- net/ipv4/icmp.c\n统计: +3 -1",
+        "files": [
+          "net/ipv4/icmp.c"
+        ],
+        "additions": 3,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=614aefe56af8e13331e50220c936fc0689cf5675"
+      }
+    },
+    {
+      "id": "art_1774439411477_mz9y87z2u",
+      "sourceName": "Mainline",
+      "title": "net: dsa: bcm_sf2: fix missing clk_disable_unprepare() in error paths",
+      "content": "提交: b487318\n作者: Anas Iqbal <mohd.abd.6602@gmail.com>\n日期: 2026-03-18T08:42:12Z\n标题: net: dsa: bcm_sf2: fix missing clk_disable_unprepare() in error paths\n修改的文件:\n- drivers/net/dsa/bcm_sf2.c\n统计: +6 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b48731849609cbd8c53785a48976850b443153fd",
+      "author": "Anas Iqbal",
+      "fetchedAt": "2026-03-25T11:50:11.477Z",
+      "gitCommitData": {
+        "hash": "b48731849609cbd8c53785a48976850b443153fd",
+        "shortHash": "b487318",
+        "title": "net: dsa: bcm_sf2: fix missing clk_disable_unprepare() in error paths",
+        "author": "Anas Iqbal",
+        "authorEmail": "mohd.abd.6602@gmail.com",
+        "date": "2026-03-18T08:42:12Z",
+        "content": "提交: b487318\n作者: Anas Iqbal <mohd.abd.6602@gmail.com>\n日期: 2026-03-18T08:42:12Z\n标题: net: dsa: bcm_sf2: fix missing clk_disable_unprepare() in error paths\n修改的文件:\n- drivers/net/dsa/bcm_sf2.c\n统计: +6 -2",
+        "files": [
+          "drivers/net/dsa/bcm_sf2.c"
+        ],
+        "additions": 6,
+        "deletions": 2,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b48731849609cbd8c53785a48976850b443153fd"
+      }
+    },
+    {
+      "id": "art_1774439412834_jygnxeo3c",
+      "sourceName": "Mainline",
+      "title": "pmdomain: bcm: bcm2835-power: Increase ASB control timeout",
+      "content": "提交: b826d2c\n作者: Maíra Canal <mcanal@igalia.com>\n日期: 2026-03-17T19:41:49-03:00\n标题: pmdomain: bcm: bcm2835-power: Increase ASB control timeout\n修改的文件:\n- drivers/pmdomain/bcm/bcm2835-power.c\n统计: +4 -8",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b826d2c0b0ecb844c84431ba6b502e744f5d919a",
+      "author": "Maíra Canal",
+      "fetchedAt": "2026-03-25T11:50:12.834Z",
+      "gitCommitData": {
+        "hash": "b826d2c0b0ecb844c84431ba6b502e744f5d919a",
+        "shortHash": "b826d2c",
+        "title": "pmdomain: bcm: bcm2835-power: Increase ASB control timeout",
+        "author": "Maíra Canal",
+        "authorEmail": "mcanal@igalia.com",
+        "date": "2026-03-17T19:41:49-03:00",
+        "content": "提交: b826d2c\n作者: Maíra Canal <mcanal@igalia.com>\n日期: 2026-03-17T19:41:49-03:00\n标题: pmdomain: bcm: bcm2835-power: Increase ASB control timeout\n修改的文件:\n- drivers/pmdomain/bcm/bcm2835-power.c\n统计: +4 -8",
+        "files": [
+          "drivers/pmdomain/bcm/bcm2835-power.c"
+        ],
+        "additions": 4,
+        "deletions": 8,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b826d2c0b0ecb844c84431ba6b502e744f5d919a"
+      }
+    },
+    {
+      "id": "art_1774439412100_iqjcf3hnd",
+      "sourceName": "Mainline",
+      "title": "netfilter: nf_tables: release flowtable after rcu grace period on error",
+      "content": "提交: d73f4b5\n作者: Pablo Neira Ayuso <pablo@netfilter.org>\n日期: 2026-03-17T20:00:26+01:00\n标题: netfilter: nf_tables: release flowtable after rcu grace period on error\n修改的文件:\n- net/netfilter/nf_tables_api.c\n统计: +1 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d73f4b53aaaea4c95f245e491aa5eeb8a21874ce",
+      "author": "Pablo Neira Ayuso",
+      "fetchedAt": "2026-03-25T11:50:12.100Z",
+      "gitCommitData": {
+        "hash": "d73f4b53aaaea4c95f245e491aa5eeb8a21874ce",
+        "shortHash": "d73f4b5",
+        "title": "netfilter: nf_tables: release flowtable after rcu grace period on error",
+        "author": "Pablo Neira Ayuso",
+        "authorEmail": "pablo@netfilter.org",
+        "date": "2026-03-17T20:00:26+01:00",
+        "content": "提交: d73f4b5\n作者: Pablo Neira Ayuso <pablo@netfilter.org>\n日期: 2026-03-17T20:00:26+01:00\n标题: netfilter: nf_tables: release flowtable after rcu grace period on error\n修改的文件:\n- net/netfilter/nf_tables_api.c\n统计: +1 -0",
+        "files": [
+          "net/netfilter/nf_tables_api.c"
+        ],
+        "additions": 1,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d73f4b53aaaea4c95f245e491aa5eeb8a21874ce"
+      }
+    },
+    {
+      "id": "art_1774439412874_hh1wgu2ei",
+      "sourceName": "Mainline",
+      "title": "mtd: rawnand: pl353: make sure optimal timings are applied",
+      "content": "提交: b9465b0\n作者: Olivier Sobrie <olivier@sobrie.be>\n日期: 2026-03-17T18:18:07+01:00\n标题: mtd: rawnand: pl353: make sure optimal timings are applied\n修改的文件:\n- drivers/mtd/nand/raw/pl35x-nand-controller.c\n统计: +3 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b9465b04de4b90228de03db9a1e0d56b00814366",
+      "author": "Olivier Sobrie",
+      "fetchedAt": "2026-03-25T11:50:12.874Z",
+      "gitCommitData": {
+        "hash": "b9465b04de4b90228de03db9a1e0d56b00814366",
+        "shortHash": "b9465b0",
+        "title": "mtd: rawnand: pl353: make sure optimal timings are applied",
+        "author": "Olivier Sobrie",
+        "authorEmail": "olivier@sobrie.be",
+        "date": "2026-03-17T18:18:07+01:00",
+        "content": "提交: b9465b0\n作者: Olivier Sobrie <olivier@sobrie.be>\n日期: 2026-03-17T18:18:07+01:00\n标题: mtd: rawnand: pl353: make sure optimal timings are applied\n修改的文件:\n- drivers/mtd/nand/raw/pl35x-nand-controller.c\n统计: +3 -0",
+        "files": [
+          "drivers/mtd/nand/raw/pl35x-nand-controller.c"
+        ],
+        "additions": 3,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b9465b04de4b90228de03db9a1e0d56b00814366"
+      }
+    },
+    {
+      "id": "art_1774439412914_jvjzufizx",
+      "sourceName": "Mainline",
+      "title": "mtd: spi-nor: Rename spi_nor_spimem_check_op()",
+      "content": "提交: 16dec01\n作者: Miquel Raynal <miquel.raynal@bootlin.com>\n日期: 2026-03-17T18:17:22+01:00\n标题: mtd: spi-nor: Rename spi_nor_spimem_check_op()\n修改的文件:\n- drivers/mtd/spi-nor/core.c\n统计: +6 -6",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=16dec014db0f4ac6f8090dea0bdfcb1ecebc12ca",
+      "author": "Miquel Raynal",
+      "fetchedAt": "2026-03-25T11:50:12.914Z",
+      "gitCommitData": {
+        "hash": "16dec014db0f4ac6f8090dea0bdfcb1ecebc12ca",
+        "shortHash": "16dec01",
+        "title": "mtd: spi-nor: Rename spi_nor_spimem_check_op()",
+        "author": "Miquel Raynal",
+        "authorEmail": "miquel.raynal@bootlin.com",
+        "date": "2026-03-17T18:17:22+01:00",
+        "content": "提交: 16dec01\n作者: Miquel Raynal <miquel.raynal@bootlin.com>\n日期: 2026-03-17T18:17:22+01:00\n标题: mtd: spi-nor: Rename spi_nor_spimem_check_op()\n修改的文件:\n- drivers/mtd/spi-nor/core.c\n统计: +6 -6",
+        "files": [
+          "drivers/mtd/spi-nor/core.c"
+        ],
+        "additions": 6,
+        "deletions": 6,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=16dec014db0f4ac6f8090dea0bdfcb1ecebc12ca"
+      }
+    },
+    {
+      "id": "art_1774439411895_ua7ewoil7",
+      "sourceName": "Mainline",
+      "title": "net: shaper: protect from late creation of hierarchy",
+      "content": "提交: d75ec7e\n作者: Jakub Kicinski <kuba@kernel.org>\n日期: 2026-03-17T09:10:14-07:00\n标题: net: shaper: protect from late creation of hierarchy\n修改的文件:\n- Documentation/netlink/specs/net_shaper.yaml\n- net/shaper/shaper.c\n- net/shaper/shaper_nl_gen.c\n- net/shaper/shaper_nl_gen.h\n统计: +89 -74",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d75ec7e8ba1979a1eb0b9211d94d749cdce849c8",
+      "author": "Jakub Kicinski",
+      "fetchedAt": "2026-03-25T11:50:11.895Z",
+      "gitCommitData": {
+        "hash": "d75ec7e8ba1979a1eb0b9211d94d749cdce849c8",
+        "shortHash": "d75ec7e",
+        "title": "net: shaper: protect from late creation of hierarchy",
+        "author": "Jakub Kicinski",
+        "authorEmail": "kuba@kernel.org",
+        "date": "2026-03-17T09:10:14-07:00",
+        "content": "提交: d75ec7e\n作者: Jakub Kicinski <kuba@kernel.org>\n日期: 2026-03-17T09:10:14-07:00\n标题: net: shaper: protect from late creation of hierarchy\n修改的文件:\n- Documentation/netlink/specs/net_shaper.yaml\n- net/shaper/shaper.c\n- net/shaper/shaper_nl_gen.c\n- net/shaper/shaper_nl_gen.h\n统计: +89 -74",
+        "files": [
+          "Documentation/netlink/specs/net_shaper.yaml",
+          "net/shaper/shaper.c",
+          "net/shaper/shaper_nl_gen.c",
+          "net/shaper/shaper_nl_gen.h"
+        ],
+        "additions": 89,
+        "deletions": 74,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d75ec7e8ba1979a1eb0b9211d94d749cdce849c8"
+      }
+    },
+    {
+      "id": "art_1774439411935_n576d17j5",
+      "sourceName": "Mainline",
+      "title": "net: shaper: protect late read accesses to the hierarchy",
+      "content": "提交: 0f9ea71\n作者: Jakub Kicinski <kuba@kernel.org>\n日期: 2026-03-17T09:10:13-07:00\n标题: net: shaper: protect late read accesses to the hierarchy\n修改的文件:\n- net/shaper/shaper.c\n统计: +22 -4",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0f9ea7141f365b4f27226898e62220fb98ef8dc6",
+      "author": "Jakub Kicinski",
+      "fetchedAt": "2026-03-25T11:50:11.935Z",
+      "gitCommitData": {
+        "hash": "0f9ea7141f365b4f27226898e62220fb98ef8dc6",
+        "shortHash": "0f9ea71",
+        "title": "net: shaper: protect late read accesses to the hierarchy",
+        "author": "Jakub Kicinski",
+        "authorEmail": "kuba@kernel.org",
+        "date": "2026-03-17T09:10:13-07:00",
+        "content": "提交: 0f9ea71\n作者: Jakub Kicinski <kuba@kernel.org>\n日期: 2026-03-17T09:10:13-07:00\n标题: net: shaper: protect late read accesses to the hierarchy\n修改的文件:\n- net/shaper/shaper.c\n统计: +22 -4",
+        "files": [
+          "net/shaper/shaper.c"
+        ],
+        "additions": 22,
+        "deletions": 4,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0f9ea7141f365b4f27226898e62220fb98ef8dc6"
+      }
+    },
+    {
+      "id": "art_1774439412996_gyy851hlc",
+      "sourceName": "Mainline",
+      "title": "mshv: Fix error handling in mshv_region_pin",
+      "content": "提交: c0e296f\n作者: Stanislav Kinsburskii <skinsburskii@linux.microsoft.com>\n日期: 2026-03-17T15:04:55Z\n标题: mshv: Fix error handling in mshv_region_pin\n修改的文件:\n- drivers/hv/mshv_regions.c\n统计: +4 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c0e296f257671ba10249630fe58026f29e4804d9",
+      "author": "Stanislav Kinsburskii",
+      "fetchedAt": "2026-03-25T11:50:12.996Z",
+      "gitCommitData": {
+        "hash": "c0e296f257671ba10249630fe58026f29e4804d9",
+        "shortHash": "c0e296f",
+        "title": "mshv: Fix error handling in mshv_region_pin",
+        "author": "Stanislav Kinsburskii",
+        "authorEmail": "skinsburskii@linux.microsoft.com",
+        "date": "2026-03-17T15:04:55Z",
+        "content": "提交: c0e296f\n作者: Stanislav Kinsburskii <skinsburskii@linux.microsoft.com>\n日期: 2026-03-17T15:04:55Z\n标题: mshv: Fix error handling in mshv_region_pin\n修改的文件:\n- drivers/hv/mshv_regions.c\n统计: +4 -2",
+        "files": [
+          "drivers/hv/mshv_regions.c"
+        ],
+        "additions": 4,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c0e296f257671ba10249630fe58026f29e4804d9"
+      }
+    },
+    {
+      "id": "art_1774439412140_8syvglm2m",
+      "sourceName": "Mainline",
+      "title": "netfilter: bpf: defer hook memory release until rcu readers are done",
+      "content": "提交: 24f90fa\n作者: Florian Westphal <fw@strlen.de>\n日期: 2026-03-17T12:23:08+01:00\n标题: netfilter: bpf: defer hook memory release until rcu readers are done\n修改的文件:\n- net/netfilter/nf_bpf_link.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=24f90fa3994b992d1a09003a3db2599330a5232a",
+      "author": "Florian Westphal",
+      "fetchedAt": "2026-03-25T11:50:12.140Z",
+      "gitCommitData": {
+        "hash": "24f90fa3994b992d1a09003a3db2599330a5232a",
+        "shortHash": "24f90fa",
+        "title": "netfilter: bpf: defer hook memory release until rcu readers are done",
+        "author": "Florian Westphal",
+        "authorEmail": "fw@strlen.de",
+        "date": "2026-03-17T12:23:08+01:00",
+        "content": "提交: 24f90fa\n作者: Florian Westphal <fw@strlen.de>\n日期: 2026-03-17T12:23:08+01:00\n标题: netfilter: bpf: defer hook memory release until rcu readers are done\n修改的文件:\n- net/netfilter/nf_bpf_link.c\n统计: +1 -1",
+        "files": [
+          "net/netfilter/nf_bpf_link.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=24f90fa3994b992d1a09003a3db2599330a5232a"
+      }
+    },
+    {
+      "id": "art_1774439412713_bwgngfd15",
+      "sourceName": "Mainline",
+      "title": "x86/mce/amd: Check SMCA feature bit before accessing SMCA MSRs",
+      "content": "提交: 201bc18\n作者: William Roche <william.roche@oracle.com>\n日期: 2026-03-17T10:38:10Z\n标题: x86/mce/amd: Check SMCA feature bit before accessing SMCA MSRs\n修改的文件:\n- arch/x86/kernel/cpu/mce/amd.c\n统计: +11 -6",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=201bc182ad6333468013f1af0719ffe125826b6a",
+      "author": "William Roche",
+      "fetchedAt": "2026-03-25T11:50:12.713Z",
+      "gitCommitData": {
+        "hash": "201bc182ad6333468013f1af0719ffe125826b6a",
+        "shortHash": "201bc18",
+        "title": "x86/mce/amd: Check SMCA feature bit before accessing SMCA MSRs",
+        "author": "William Roche",
+        "authorEmail": "william.roche@oracle.com",
+        "date": "2026-03-17T10:38:10Z",
+        "content": "提交: 201bc18\n作者: William Roche <william.roche@oracle.com>\n日期: 2026-03-17T10:38:10Z\n标题: x86/mce/amd: Check SMCA feature bit before accessing SMCA MSRs\n修改的文件:\n- arch/x86/kernel/cpu/mce/amd.c\n统计: +11 -6",
+        "files": [
+          "arch/x86/kernel/cpu/mce/amd.c"
+        ],
+        "additions": 11,
+        "deletions": 6,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=201bc182ad6333468013f1af0719ffe125826b6a"
+      }
+    },
+    {
+      "id": "art_1774439412956_k4bqnzu6x",
+      "sourceName": "Mainline",
+      "title": "mtd: spi-nor: Fix RDCR controller capability core check",
+      "content": "提交: ac512cd\n作者: Miquel Raynal <miquel.raynal@bootlin.com>\n日期: 2026-03-17T11:18:42+01:00\n标题: mtd: spi-nor: Fix RDCR controller capability core check\n修改的文件:\n- drivers/mtd/spi-nor/core.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ac512cd351f7e4ab4569f6a52c116f4ab3a239cc",
+      "author": "Miquel Raynal",
+      "fetchedAt": "2026-03-25T11:50:12.956Z",
+      "gitCommitData": {
+        "hash": "ac512cd351f7e4ab4569f6a52c116f4ab3a239cc",
+        "shortHash": "ac512cd",
+        "title": "mtd: spi-nor: Fix RDCR controller capability core check",
+        "author": "Miquel Raynal",
+        "authorEmail": "miquel.raynal@bootlin.com",
+        "date": "2026-03-17T11:18:42+01:00",
+        "content": "提交: ac512cd\n作者: Miquel Raynal <miquel.raynal@bootlin.com>\n日期: 2026-03-17T11:18:42+01:00\n标题: mtd: spi-nor: Fix RDCR controller capability core check\n修改的文件:\n- drivers/mtd/spi-nor/core.c\n统计: +1 -1",
+        "files": [
+          "drivers/mtd/spi-nor/core.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ac512cd351f7e4ab4569f6a52c116f4ab3a239cc"
+      }
+    },
+    {
+      "id": "art_1774439412468_8iqvigz22",
+      "sourceName": "Mainline",
+      "title": "NFC: nxp-nci: allow GPIOs to sleep",
+      "content": "提交: 55dc632\n作者: Ian Ray <ian.ray@gehealthcare.com>\n日期: 2026-03-17T10:53:36+02:00\n标题: NFC: nxp-nci: allow GPIOs to sleep\n修改的文件:\n- drivers/nfc/nxp-nci/i2c.c\n统计: +2 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=55dc632ab2ac2889b15995a9eef56c753d48ebc7",
+      "author": "Ian Ray",
+      "fetchedAt": "2026-03-25T11:50:12.468Z",
+      "gitCommitData": {
+        "hash": "55dc632ab2ac2889b15995a9eef56c753d48ebc7",
+        "shortHash": "55dc632",
+        "title": "NFC: nxp-nci: allow GPIOs to sleep",
+        "author": "Ian Ray",
+        "authorEmail": "ian.ray@gehealthcare.com",
+        "date": "2026-03-17T10:53:36+02:00",
+        "content": "提交: 55dc632\n作者: Ian Ray <ian.ray@gehealthcare.com>\n日期: 2026-03-17T10:53:36+02:00\n标题: NFC: nxp-nci: allow GPIOs to sleep\n修改的文件:\n- drivers/nfc/nxp-nci/i2c.c\n统计: +2 -2",
+        "files": [
+          "drivers/nfc/nxp-nci/i2c.c"
+        ],
+        "additions": 2,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=55dc632ab2ac2889b15995a9eef56c753d48ebc7"
+      }
+    },
+    {
+      "id": "art_1774439412592_7gevl0qtu",
+      "sourceName": "Mainline",
+      "title": "netdevsim: drop PSP ext ref on forward failure",
+      "content": "提交: 7d93514\n作者: Wesley Atwell <atwellwea@gmail.com>\n日期: 2026-03-17T00:14:31-06:00\n标题: netdevsim: drop PSP ext ref on forward failure\n修改的文件:\n- drivers/net/netdevsim/netdev.c\n统计: +4 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7d9351435ebba08bbb60f42793175c9dc714d2fb",
+      "author": "Wesley Atwell",
+      "fetchedAt": "2026-03-25T11:50:12.592Z",
+      "gitCommitData": {
+        "hash": "7d9351435ebba08bbb60f42793175c9dc714d2fb",
+        "shortHash": "7d93514",
+        "title": "netdevsim: drop PSP ext ref on forward failure",
+        "author": "Wesley Atwell",
+        "authorEmail": "atwellwea@gmail.com",
+        "date": "2026-03-17T00:14:31-06:00",
+        "content": "提交: 7d93514\n作者: Wesley Atwell <atwellwea@gmail.com>\n日期: 2026-03-17T00:14:31-06:00\n标题: netdevsim: drop PSP ext ref on forward failure\n修改的文件:\n- drivers/net/netdevsim/netdev.c\n统计: +4 -1",
+        "files": [
+          "drivers/net/netdevsim/netdev.c"
+        ],
+        "additions": 4,
+        "deletions": 1,
+        "subsystem": "net",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7d9351435ebba08bbb60f42793175c9dc714d2fb"
+      }
+    },
+    {
+      "id": "art_1774439412221_cvm5l7l0j",
+      "sourceName": "Mainline",
+      "title": "udp_tunnel: fix NULL deref caused by udp_sock_create6 when CONFIG_IPV6=n",
+      "content": "提交: b3a6df2\n作者: Xiang Mei <xmei5@asu.edu>\n日期: 2026-03-16T18:02:41-07:00\n标题: udp_tunnel: fix NULL deref caused by udp_sock_create6 when CONFIG_IPV6=n\n修改的文件:\n- include/net/udp_tunnel.h\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b3a6df291fecf5f8a308953b65ca72b7fc9e015d",
+      "author": "Xiang Mei",
+      "fetchedAt": "2026-03-25T11:50:12.221Z",
+      "gitCommitData": {
+        "hash": "b3a6df291fecf5f8a308953b65ca72b7fc9e015d",
+        "shortHash": "b3a6df2",
+        "title": "udp_tunnel: fix NULL deref caused by udp_sock_create6 when CONFIG_IPV6=n",
+        "author": "Xiang Mei",
+        "authorEmail": "xmei5@asu.edu",
+        "date": "2026-03-16T18:02:41-07:00",
+        "content": "提交: b3a6df2\n作者: Xiang Mei <xmei5@asu.edu>\n日期: 2026-03-16T18:02:41-07:00\n标题: udp_tunnel: fix NULL deref caused by udp_sock_create6 when CONFIG_IPV6=n\n修改的文件:\n- include/net/udp_tunnel.h\n统计: +1 -1",
+        "files": [
+          "include/net/udp_tunnel.h"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b3a6df291fecf5f8a308953b65ca72b7fc9e015d"
+      }
+    },
+    {
+      "id": "art_1774439412181_xlnl95cxq",
+      "sourceName": "Mainline",
+      "title": "net: bonding: fix NULL deref in bond_debug_rlb_hash_show",
+      "content": "提交: 605b524\n作者: Xiang Mei <xmei5@asu.edu>\n日期: 2026-03-16T17:50:34-07:00\n标题: net: bonding: fix NULL deref in bond_debug_rlb_hash_show\n修改的文件:\n- drivers/net/bonding/bond_debugfs.c\n统计: +11 -5",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=605b52497bf89b3b154674deb135da98f916e390",
+      "author": "Xiang Mei",
+      "fetchedAt": "2026-03-25T11:50:12.181Z",
+      "gitCommitData": {
+        "hash": "605b52497bf89b3b154674deb135da98f916e390",
+        "shortHash": "605b524",
+        "title": "net: bonding: fix NULL deref in bond_debug_rlb_hash_show",
+        "author": "Xiang Mei",
+        "authorEmail": "xmei5@asu.edu",
+        "date": "2026-03-16T17:50:34-07:00",
+        "content": "提交: 605b524\n作者: Xiang Mei <xmei5@asu.edu>\n日期: 2026-03-16T17:50:34-07:00\n标题: net: bonding: fix NULL deref in bond_debug_rlb_hash_show\n修改的文件:\n- drivers/net/bonding/bond_debugfs.c\n统计: +11 -5",
+        "files": [
+          "drivers/net/bonding/bond_debugfs.c"
+        ],
+        "additions": 11,
+        "deletions": 5,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=605b52497bf89b3b154674deb135da98f916e390"
+      }
+    },
+    {
+      "id": "art_1774439412018_ny2yulwlm",
+      "sourceName": "Mainline",
+      "title": "net: mvpp2: guard flow control update with global_tx_fc in buffer switching",
+      "content": "提交: 8a63baa\n作者: Muhammad Hammad Ijaz <mhijaz@amazon.com>\n日期: 2026-03-16T12:31:01-07:00\n标题: net: mvpp2: guard flow control update with global_tx_fc in buffer switching\n修改的文件:\n- drivers/net/ethernet/marvell/mvpp2/mvpp2_main.c\n统计: +2 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8a63baadf08453f66eb582fdb6dd234f72024723",
+      "author": "Muhammad Hammad Ijaz",
+      "fetchedAt": "2026-03-25T11:50:12.018Z",
+      "gitCommitData": {
+        "hash": "8a63baadf08453f66eb582fdb6dd234f72024723",
+        "shortHash": "8a63baa",
+        "title": "net: mvpp2: guard flow control update with global_tx_fc in buffer switching",
+        "author": "Muhammad Hammad Ijaz",
+        "authorEmail": "mhijaz@amazon.com",
+        "date": "2026-03-16T12:31:01-07:00",
+        "content": "提交: 8a63baa\n作者: Muhammad Hammad Ijaz <mhijaz@amazon.com>\n日期: 2026-03-16T12:31:01-07:00\n标题: net: mvpp2: guard flow control update with global_tx_fc in buffer switching\n修改的文件:\n- drivers/net/ethernet/marvell/mvpp2/mvpp2_main.c\n统计: +2 -2",
+        "files": [
+          "drivers/net/ethernet/marvell/mvpp2/mvpp2_main.c"
+        ],
+        "additions": 2,
+        "deletions": 2,
+        "subsystem": "net",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8a63baadf08453f66eb582fdb6dd234f72024723"
+      }
+    },
+    {
+      "id": "art_1774439410499_d7em0hizz",
+      "sourceName": "Mainline",
+      "title": "tracing: Fix failure to read user space from system call trace events",
+      "content": "提交: edca33a\n作者: Steven Rostedt <rostedt@goodmis.org>\n日期: 2026-03-16T13:07:34-04:00\n标题: tracing: Fix failure to read user space from system call trace events\n修改的文件:\n- kernel/trace/trace.c\n统计: +17 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=edca33a56297d5741ccf867669debec116681987",
+      "author": "Steven Rostedt",
+      "fetchedAt": "2026-03-25T11:50:10.499Z",
+      "gitCommitData": {
+        "hash": "edca33a56297d5741ccf867669debec116681987",
+        "shortHash": "edca33a",
+        "title": "tracing: Fix failure to read user space from system call trace events",
+        "author": "Steven Rostedt",
+        "authorEmail": "rostedt@goodmis.org",
+        "date": "2026-03-16T13:07:34-04:00",
+        "content": "提交: edca33a\n作者: Steven Rostedt <rostedt@goodmis.org>\n日期: 2026-03-16T13:07:34-04:00\n标题: tracing: Fix failure to read user space from system call trace events\n修改的文件:\n- kernel/trace/trace.c\n统计: +17 -0",
+        "files": [
+          "kernel/trace/trace.c"
+        ],
+        "additions": 17,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=edca33a56297d5741ccf867669debec116681987"
+      }
+    },
+    {
+      "id": "art_1774439411975_lc4g5zu4r",
+      "sourceName": "Mainline",
+      "title": "arm64: realm: Fix PTE_NS_SHARED for 52bit PA support",
+      "content": "提交: 8c6e9b6\n作者: Suzuki K Poulose <suzuki.poulose@arm.com>\n日期: 2026-03-16T16:19:01Z\n标题: arm64: realm: Fix PTE_NS_SHARED for 52bit PA support\n修改的文件:\n- arch/arm64/kernel/rsi.c\n统计: +2 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8c6e9b60f5c7985a9fe41320556a92d7a33451df",
+      "author": "Suzuki K Poulose",
+      "fetchedAt": "2026-03-25T11:50:11.975Z",
+      "gitCommitData": {
+        "hash": "8c6e9b60f5c7985a9fe41320556a92d7a33451df",
+        "shortHash": "8c6e9b6",
+        "title": "arm64: realm: Fix PTE_NS_SHARED for 52bit PA support",
+        "author": "Suzuki K Poulose",
+        "authorEmail": "suzuki.poulose@arm.com",
+        "date": "2026-03-16T16:19:01Z",
+        "content": "提交: 8c6e9b6\n作者: Suzuki K Poulose <suzuki.poulose@arm.com>\n日期: 2026-03-16T16:19:01Z\n标题: arm64: realm: Fix PTE_NS_SHARED for 52bit PA support\n修改的文件:\n- arch/arm64/kernel/rsi.c\n统计: +2 -1",
+        "files": [
+          "arch/arm64/kernel/rsi.c"
+        ],
+        "additions": 2,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8c6e9b60f5c7985a9fe41320556a92d7a33451df"
+      }
+    },
+    {
+      "id": "art_1774439412511_u6qfzj9dl",
+      "sourceName": "Mainline",
+      "title": "net: macb: fix uninitialized rx_fs_lock",
+      "content": "提交: 34b11cc\n作者: Fedor Pchelkin <pchelkin@ispras.ru>\n日期: 2026-03-16T13:38:25+03:00\n标题: net: macb: fix uninitialized rx_fs_lock\n修改的文件:\n- drivers/net/ethernet/cadence/macb_main.c\n统计: +3 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34b11cc56e4369bc08b1f4c4a04222d75ed596ce",
+      "author": "Fedor Pchelkin",
+      "fetchedAt": "2026-03-25T11:50:12.511Z",
+      "gitCommitData": {
+        "hash": "34b11cc56e4369bc08b1f4c4a04222d75ed596ce",
+        "shortHash": "34b11cc",
+        "title": "net: macb: fix uninitialized rx_fs_lock",
+        "author": "Fedor Pchelkin",
+        "authorEmail": "pchelkin@ispras.ru",
+        "date": "2026-03-16T13:38:25+03:00",
+        "content": "提交: 34b11cc\n作者: Fedor Pchelkin <pchelkin@ispras.ru>\n日期: 2026-03-16T13:38:25+03:00\n标题: net: macb: fix uninitialized rx_fs_lock\n修改的文件:\n- drivers/net/ethernet/cadence/macb_main.c\n统计: +3 -0",
+        "files": [
+          "drivers/net/ethernet/cadence/macb_main.c"
+        ],
+        "additions": 3,
+        "deletions": 0,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34b11cc56e4369bc08b1f4c4a04222d75ed596ce"
+      }
+    },
+    {
+      "id": "art_1774439412552_svcewed7a",
+      "sourceName": "Mainline",
+      "title": "net: macb: fix use-after-free access to PTP clock",
+      "content": "提交: 8da13e6\n作者: Fedor Pchelkin <pchelkin@ispras.ru>\n日期: 2026-03-16T13:38:24+03:00\n标题: net: macb: fix use-after-free access to PTP clock\n修改的文件:\n- drivers/net/ethernet/cadence/macb_ptp.c\n统计: +3 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8da13e6d63c1a97f7302d342c89c4a56a55c7015",
+      "author": "Fedor Pchelkin",
+      "fetchedAt": "2026-03-25T11:50:12.552Z",
+      "gitCommitData": {
+        "hash": "8da13e6d63c1a97f7302d342c89c4a56a55c7015",
+        "shortHash": "8da13e6",
+        "title": "net: macb: fix use-after-free access to PTP clock",
+        "author": "Fedor Pchelkin",
+        "authorEmail": "pchelkin@ispras.ru",
+        "date": "2026-03-16T13:38:24+03:00",
+        "content": "提交: 8da13e6\n作者: Fedor Pchelkin <pchelkin@ispras.ru>\n日期: 2026-03-16T13:38:24+03:00\n标题: net: macb: fix use-after-free access to PTP clock\n修改的文件:\n- drivers/net/ethernet/cadence/macb_ptp.c\n统计: +3 -1",
+        "files": [
+          "drivers/net/ethernet/cadence/macb_ptp.c"
+        ],
+        "additions": 3,
+        "deletions": 1,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=8da13e6d63c1a97f7302d342c89c4a56a55c7015"
+      }
+    },
+    {
+      "id": "art_1774439412262_njysidyic",
+      "sourceName": "Mainline",
+      "title": "net/mlx5e: Fix race condition during IPSec ESN update",
+      "content": "提交: beb6e2e\n作者: Jianbo Liu <jianbol@nvidia.com>\n日期: 2026-03-16T11:46:03+02:00\n标题: net/mlx5e: Fix race condition during IPSec ESN update\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c\n统计: +14 -19",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=beb6e2e5976a128b0cccf10d158124422210c5ef",
+      "author": "Jianbo Liu",
+      "fetchedAt": "2026-03-25T11:50:12.262Z",
+      "gitCommitData": {
+        "hash": "beb6e2e5976a128b0cccf10d158124422210c5ef",
+        "shortHash": "beb6e2e",
+        "title": "net/mlx5e: Fix race condition during IPSec ESN update",
+        "author": "Jianbo Liu",
+        "authorEmail": "jianbol@nvidia.com",
+        "date": "2026-03-16T11:46:03+02:00",
+        "content": "提交: beb6e2e\n作者: Jianbo Liu <jianbol@nvidia.com>\n日期: 2026-03-16T11:46:03+02:00\n标题: net/mlx5e: Fix race condition during IPSec ESN update\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c\n统计: +14 -19",
+        "files": [
+          "drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c"
+        ],
+        "additions": 14,
+        "deletions": 19,
+        "subsystem": "net",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=beb6e2e5976a128b0cccf10d158124422210c5ef"
+      }
+    },
+    {
+      "id": "art_1774439412303_e2tcjn9ct",
+      "sourceName": "Mainline",
+      "title": "net/mlx5e: Prevent concurrent access to IPSec ASO context",
+      "content": "提交: 99b3685\n作者: Jianbo Liu <jianbol@nvidia.com>\n日期: 2026-03-16T11:46:02+02:00\n标题: net/mlx5e: Prevent concurrent access to IPSec ASO context\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec.h\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c\n统计: +9 -9",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=99b36850d881e2d65912b2520a1c80d0fcc9429a",
+      "author": "Jianbo Liu",
+      "fetchedAt": "2026-03-25T11:50:12.303Z",
+      "gitCommitData": {
+        "hash": "99b36850d881e2d65912b2520a1c80d0fcc9429a",
+        "shortHash": "99b3685",
+        "title": "net/mlx5e: Prevent concurrent access to IPSec ASO context",
+        "author": "Jianbo Liu",
+        "authorEmail": "jianbol@nvidia.com",
+        "date": "2026-03-16T11:46:02+02:00",
+        "content": "提交: 99b3685\n作者: Jianbo Liu <jianbol@nvidia.com>\n日期: 2026-03-16T11:46:02+02:00\n标题: net/mlx5e: Prevent concurrent access to IPSec ASO context\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec.h\n- drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c\n统计: +9 -9",
+        "files": [
+          "drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec.h",
+          "drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_offload.c"
+        ],
+        "additions": 9,
+        "deletions": 9,
+        "subsystem": "net",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=99b36850d881e2d65912b2520a1c80d0fcc9429a"
+      }
+    },
+    {
+      "id": "art_1774439412345_u22s4cp7t",
+      "sourceName": "Mainline",
+      "title": "net/mlx5: qos: Restrict RTNL area to avoid a lock cycle",
+      "content": "提交: b7e3a5d\n作者: Cosmin Ratiu <cratiu@nvidia.com>\n日期: 2026-03-16T11:46:01+02:00\n标题: net/mlx5: qos: Restrict RTNL area to avoid a lock cycle\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/esw/qos.c\n统计: +9 -14",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b7e3a5d9c0d66b7fb44f63aef3bd734821afa0c8",
+      "author": "Cosmin Ratiu",
+      "fetchedAt": "2026-03-25T11:50:12.345Z",
+      "gitCommitData": {
+        "hash": "b7e3a5d9c0d66b7fb44f63aef3bd734821afa0c8",
+        "shortHash": "b7e3a5d",
+        "title": "net/mlx5: qos: Restrict RTNL area to avoid a lock cycle",
+        "author": "Cosmin Ratiu",
+        "authorEmail": "cratiu@nvidia.com",
+        "date": "2026-03-16T11:46:01+02:00",
+        "content": "提交: b7e3a5d\n作者: Cosmin Ratiu <cratiu@nvidia.com>\n日期: 2026-03-16T11:46:01+02:00\n标题: net/mlx5: qos: Restrict RTNL area to avoid a lock cycle\n修改的文件:\n- drivers/net/ethernet/mellanox/mlx5/core/esw/qos.c\n统计: +9 -14",
+        "files": [
+          "drivers/net/ethernet/mellanox/mlx5/core/esw/qos.c"
+        ],
+        "additions": 9,
+        "deletions": 14,
+        "subsystem": "net",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b7e3a5d9c0d66b7fb44f63aef3bd734821afa0c8"
+      }
+    },
+    {
+      "id": "art_1774439412428_p78izia9w",
+      "sourceName": "Mainline",
+      "title": "ipv6: add NULL checks for idev in SRv6 paths",
+      "content": "提交: 0641379\n作者: Minhong He <heminhong@kylinos.cn>\n日期: 2026-03-16T15:33:01+08:00\n标题: ipv6: add NULL checks for idev in SRv6 paths\n修改的文件:\n- net/ipv6/exthdrs.c\n- net/ipv6/seg6_hmac.c\n统计: +6 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=06413793526251870e20402c39930804f14d59c0",
+      "author": "Minhong He",
+      "fetchedAt": "2026-03-25T11:50:12.428Z",
+      "gitCommitData": {
+        "hash": "06413793526251870e20402c39930804f14d59c0",
+        "shortHash": "0641379",
+        "title": "ipv6: add NULL checks for idev in SRv6 paths",
+        "author": "Minhong He",
+        "authorEmail": "heminhong@kylinos.cn",
+        "date": "2026-03-16T15:33:01+08:00",
+        "content": "提交: 0641379\n作者: Minhong He <heminhong@kylinos.cn>\n日期: 2026-03-16T15:33:01+08:00\n标题: ipv6: add NULL checks for idev in SRv6 paths\n修改的文件:\n- net/ipv6/exthdrs.c\n- net/ipv6/seg6_hmac.c\n统计: +6 -0",
+        "files": [
+          "net/ipv6/exthdrs.c",
+          "net/ipv6/seg6_hmac.c"
+        ],
+        "additions": 6,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "feature",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=06413793526251870e20402c39930804f14d59c0"
+      }
+    },
+    {
+      "id": "art_1774439410670_rcejdib1p",
+      "sourceName": "Mainline",
+      "title": "selftests/bpf: Add tests for maybe_fork_scalars() OR vs AND handling",
+      "content": "提交: 0ad1734\n作者: Daniel Wade <danjwade95@gmail.com>\n日期: 2026-03-14T13:15:21+11:00\n标题: selftests/bpf: Add tests for maybe_fork_scalars() OR vs AND handling\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_bounds.c\n统计: +94 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0ad1734cc5598d3ddb6126a8960efe85f0f807d7",
+      "author": "Daniel Wade",
+      "fetchedAt": "2026-03-25T11:50:10.670Z",
+      "gitCommitData": {
+        "hash": "0ad1734cc5598d3ddb6126a8960efe85f0f807d7",
+        "shortHash": "0ad1734",
+        "title": "selftests/bpf: Add tests for maybe_fork_scalars() OR vs AND handling",
+        "author": "Daniel Wade",
+        "authorEmail": "danjwade95@gmail.com",
+        "date": "2026-03-14T13:15:21+11:00",
+        "content": "提交: 0ad1734\n作者: Daniel Wade <danjwade95@gmail.com>\n日期: 2026-03-14T13:15:21+11:00\n标题: selftests/bpf: Add tests for maybe_fork_scalars() OR vs AND handling\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_bounds.c\n统计: +94 -0",
+        "files": [
+          "tools/testing/selftests/bpf/progs/verifier_bounds.c"
+        ],
+        "additions": 94,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "feature",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0ad1734cc5598d3ddb6126a8960efe85f0f807d7"
+      }
+    },
+    {
+      "id": "art_1774439410721_gu884ewt1",
+      "sourceName": "Mainline",
+      "title": "bpf: Fix unsound scalar forking in maybe_fork_scalars() for BPF_OR",
+      "content": "提交: c845894\n作者: Daniel Wade <danjwade95@gmail.com>\n日期: 2026-03-14T13:15:20+11:00\n标题: bpf: Fix unsound scalar forking in maybe_fork_scalars() for BPF_OR\n修改的文件:\n- kernel/bpf/verifier.c\n统计: +1 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c845894ebd6fb43226b3118d6b017942550910c5",
+      "author": "Daniel Wade",
+      "fetchedAt": "2026-03-25T11:50:10.721Z",
+      "gitCommitData": {
+        "hash": "c845894ebd6fb43226b3118d6b017942550910c5",
+        "shortHash": "c845894",
+        "title": "bpf: Fix unsound scalar forking in maybe_fork_scalars() for BPF_OR",
+        "author": "Daniel Wade",
+        "authorEmail": "danjwade95@gmail.com",
+        "date": "2026-03-14T13:15:20+11:00",
+        "content": "提交: c845894\n作者: Daniel Wade <danjwade95@gmail.com>\n日期: 2026-03-14T13:15:20+11:00\n标题: bpf: Fix unsound scalar forking in maybe_fork_scalars() for BPF_OR\n修改的文件:\n- kernel/bpf/verifier.c\n统计: +1 -1",
+        "files": [
+          "kernel/bpf/verifier.c"
+        ],
+        "additions": 1,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c845894ebd6fb43226b3118d6b017942550910c5"
+      }
+    },
+    {
+      "id": "art_1774439411355_izp34mnrg",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Fix missing runtime PM reference in ccs_mode_store",
+      "content": "提交: 65d046b\n作者: Sanjay Yadav <sanjay.kumar.yadav@intel.com>\n日期: 2026-03-13T12:46:09+05:30\n标题: drm/xe: Fix missing runtime PM reference in ccs_mode_store\n修改的文件:\n- drivers/gpu/drm/xe/xe_gt_ccs_mode.c\n统计: +2 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=65d046b2d8e0d6d855379a981869005fd6b6a41b",
+      "author": "Sanjay Yadav",
+      "fetchedAt": "2026-03-25T11:50:11.355Z",
+      "gitCommitData": {
+        "hash": "65d046b2d8e0d6d855379a981869005fd6b6a41b",
+        "shortHash": "65d046b",
+        "title": "drm/xe: Fix missing runtime PM reference in ccs_mode_store",
+        "author": "Sanjay Yadav",
+        "authorEmail": "sanjay.kumar.yadav@intel.com",
+        "date": "2026-03-13T12:46:09+05:30",
+        "content": "提交: 65d046b\n作者: Sanjay Yadav <sanjay.kumar.yadav@intel.com>\n日期: 2026-03-13T12:46:09+05:30\n标题: drm/xe: Fix missing runtime PM reference in ccs_mode_store\n修改的文件:\n- drivers/gpu/drm/xe/xe_gt_ccs_mode.c\n统计: +2 -0",
+        "files": [
+          "drivers/gpu/drm/xe/xe_gt_ccs_mode.c"
+        ],
+        "additions": 2,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=65d046b2d8e0d6d855379a981869005fd6b6a41b"
+      }
+    },
+    {
+      "id": "art_1774439411601_64xl4we1h",
+      "sourceName": "Mainline",
+      "title": "drm/xe/oa: Allow reading after disabling OA stream",
+      "content": "提交: 9be6fd9\n作者: Ashutosh Dixit <ashutosh.dixit@intel.com>\n日期: 2026-03-12T22:36:30-07:00\n标题: drm/xe/oa: Allow reading after disabling OA stream\n修改的文件:\n- drivers/gpu/drm/xe/xe_oa.c\n统计: +5 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=9be6fd9fbd2032b683e51374497768af9aaa228a",
+      "author": "Ashutosh Dixit",
+      "fetchedAt": "2026-03-25T11:50:11.601Z",
+      "gitCommitData": {
+        "hash": "9be6fd9fbd2032b683e51374497768af9aaa228a",
+        "shortHash": "9be6fd9",
+        "title": "drm/xe/oa: Allow reading after disabling OA stream",
+        "author": "Ashutosh Dixit",
+        "authorEmail": "ashutosh.dixit@intel.com",
+        "date": "2026-03-12T22:36:30-07:00",
+        "content": "提交: 9be6fd9\n作者: Ashutosh Dixit <ashutosh.dixit@intel.com>\n日期: 2026-03-12T22:36:30-07:00\n标题: drm/xe/oa: Allow reading after disabling OA stream\n修改的文件:\n- drivers/gpu/drm/xe/xe_oa.c\n统计: +5 -2",
+        "files": [
+          "drivers/gpu/drm/xe/xe_oa.c"
+        ],
+        "additions": 5,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=9be6fd9fbd2032b683e51374497768af9aaa228a"
+      }
+    },
+    {
+      "id": "art_1774439412388_5aaivdgny",
+      "sourceName": "Mainline",
+      "title": "bpf: Release module BTF IDR before module unload",
+      "content": "提交: 146bd2a\n作者: Kumar Kartikeya Dwivedi <memxor@gmail.com>\n日期: 2026-03-12T13:53:07-07:00\n标题: bpf: Release module BTF IDR before module unload\n修改的文件:\n- kernel/bpf/btf.c\n统计: +20 -4",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=146bd2a87a65aa407bb17fac70d8d583d19aba06",
+      "author": "Kumar Kartikeya Dwivedi",
+      "fetchedAt": "2026-03-25T11:50:12.388Z",
+      "gitCommitData": {
+        "hash": "146bd2a87a65aa407bb17fac70d8d583d19aba06",
+        "shortHash": "146bd2a",
+        "title": "bpf: Release module BTF IDR before module unload",
+        "author": "Kumar Kartikeya Dwivedi",
+        "authorEmail": "memxor@gmail.com",
+        "date": "2026-03-12T13:53:07-07:00",
+        "content": "提交: 146bd2a\n作者: Kumar Kartikeya Dwivedi <memxor@gmail.com>\n日期: 2026-03-12T13:53:07-07:00\n标题: bpf: Release module BTF IDR before module unload\n修改的文件:\n- kernel/bpf/btf.c\n统计: +20 -4",
+        "files": [
+          "kernel/bpf/btf.c"
+        ],
+        "additions": 20,
+        "deletions": 4,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=146bd2a87a65aa407bb17fac70d8d583d19aba06"
+      }
+    },
+    {
+      "id": "art_1774439411560_geuf5hynp",
+      "sourceName": "Mainline",
+      "title": "drm/xe/lrc: Fix uninitialized new_ts when capturing context timestamp",
+      "content": "提交: e6e3ea5\n作者: Umesh Nerlige Ramappa <umesh.nerlige.ramappa@intel.com>\n日期: 2026-03-12T05:53:09-07:00\n标题: drm/xe/lrc: Fix uninitialized new_ts when capturing context timestamp\n修改的文件:\n- drivers/gpu/drm/xe/xe_lrc.c\n统计: +2 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e6e3ea52bf07a0b7b9dff189616f189b83ee397a",
+      "author": "Umesh Nerlige Ramappa",
+      "fetchedAt": "2026-03-25T11:50:11.560Z",
+      "gitCommitData": {
+        "hash": "e6e3ea52bf07a0b7b9dff189616f189b83ee397a",
+        "shortHash": "e6e3ea5",
+        "title": "drm/xe/lrc: Fix uninitialized new_ts when capturing context timestamp",
+        "author": "Umesh Nerlige Ramappa",
+        "authorEmail": "umesh.nerlige.ramappa@intel.com",
+        "date": "2026-03-12T05:53:09-07:00",
+        "content": "提交: e6e3ea5\n作者: Umesh Nerlige Ramappa <umesh.nerlige.ramappa@intel.com>\n日期: 2026-03-12T05:53:09-07:00\n标题: drm/xe/lrc: Fix uninitialized new_ts when capturing context timestamp\n修改的文件:\n- drivers/gpu/drm/xe/xe_lrc.c\n统计: +2 -2",
+        "files": [
+          "drivers/gpu/drm/xe/xe_lrc.c"
+        ],
+        "additions": 2,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e6e3ea52bf07a0b7b9dff189616f189b83ee397a"
+      }
+    },
+    {
+      "id": "art_1774439410370_uxni8o4ca",
+      "sourceName": "Mainline",
+      "title": "ftrace: Use hash argument for tmp_ops in update_ftrace_direct_mod",
+      "content": "提交: 50b35c9\n作者: Jiri Olsa <jolsa@kernel.org>\n日期: 2026-03-12T13:37:38+01:00\n标题: ftrace: Use hash argument for tmp_ops in update_ftrace_direct_mod\n修改的文件:\n- kernel/trace/ftrace.c\n统计: +2 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=50b35c9e50a865600344ab1d8f9a8b3384d7e63d",
+      "author": "Jiri Olsa",
+      "fetchedAt": "2026-03-25T11:50:10.370Z",
+      "gitCommitData": {
+        "hash": "50b35c9e50a865600344ab1d8f9a8b3384d7e63d",
+        "shortHash": "50b35c9",
+        "title": "ftrace: Use hash argument for tmp_ops in update_ftrace_direct_mod",
+        "author": "Jiri Olsa",
+        "authorEmail": "jolsa@kernel.org",
+        "date": "2026-03-12T13:37:38+01:00",
+        "content": "提交: 50b35c9\n作者: Jiri Olsa <jolsa@kernel.org>\n日期: 2026-03-12T13:37:38+01:00\n标题: ftrace: Use hash argument for tmp_ops in update_ftrace_direct_mod\n修改的文件:\n- kernel/trace/ftrace.c\n统计: +2 -2",
+        "files": [
+          "kernel/trace/ftrace.c"
+        ],
+        "additions": 2,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=50b35c9e50a865600344ab1d8f9a8b3384d7e63d"
+      }
+    },
+    {
+      "id": "art_1774439410763_amvro2xvc",
+      "sourceName": "Mainline",
+      "title": "selftests/bpf: Add tests for sdiv32/smod32 with INT_MIN dividend",
+      "content": "提交: 4ac95c6\n作者: Jenny Guanni Qu <qguanni@gmail.com>\n日期: 2026-03-11T01:11:16Z\n标题: selftests/bpf: Add tests for sdiv32/smod32 with INT_MIN dividend\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_sdiv.c\n统计: +58 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=4ac95c65efeaf0c010199b2b2f5f78b06f28dab6",
+      "author": "Jenny Guanni Qu",
+      "fetchedAt": "2026-03-25T11:50:10.763Z",
+      "gitCommitData": {
+        "hash": "4ac95c65efeaf0c010199b2b2f5f78b06f28dab6",
+        "shortHash": "4ac95c6",
+        "title": "selftests/bpf: Add tests for sdiv32/smod32 with INT_MIN dividend",
+        "author": "Jenny Guanni Qu",
+        "authorEmail": "qguanni@gmail.com",
+        "date": "2026-03-11T01:11:16Z",
+        "content": "提交: 4ac95c6\n作者: Jenny Guanni Qu <qguanni@gmail.com>\n日期: 2026-03-11T01:11:16Z\n标题: selftests/bpf: Add tests for sdiv32/smod32 with INT_MIN dividend\n修改的文件:\n- tools/testing/selftests/bpf/progs/verifier_sdiv.c\n统计: +58 -0",
+        "files": [
+          "tools/testing/selftests/bpf/progs/verifier_sdiv.c"
+        ],
+        "additions": 58,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "feature",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=4ac95c65efeaf0c010199b2b2f5f78b06f28dab6"
+      }
+    },
+    {
+      "id": "art_1774439410803_44eqrdjvi",
+      "sourceName": "Mainline",
+      "title": "bpf: Fix undefined behavior in interpreter sdiv/smod for INT_MIN",
+      "content": "提交: c77b30b\n作者: Jenny Guanni Qu <qguanni@gmail.com>\n日期: 2026-03-11T01:11:15Z\n标题: bpf: Fix undefined behavior in interpreter sdiv/smod for INT_MIN\n修改的文件:\n- kernel/bpf/core.c\n统计: +14 -8",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c77b30bd1dcb61f66c640ff7d2757816210c7cb0",
+      "author": "Jenny Guanni Qu",
+      "fetchedAt": "2026-03-25T11:50:10.803Z",
+      "gitCommitData": {
+        "hash": "c77b30bd1dcb61f66c640ff7d2757816210c7cb0",
+        "shortHash": "c77b30b",
+        "title": "bpf: Fix undefined behavior in interpreter sdiv/smod for INT_MIN",
+        "author": "Jenny Guanni Qu",
+        "authorEmail": "qguanni@gmail.com",
+        "date": "2026-03-11T01:11:15Z",
+        "content": "提交: c77b30b\n作者: Jenny Guanni Qu <qguanni@gmail.com>\n日期: 2026-03-11T01:11:15Z\n标题: bpf: Fix undefined behavior in interpreter sdiv/smod for INT_MIN\n修改的文件:\n- kernel/bpf/core.c\n统计: +14 -8",
+        "files": [
+          "kernel/bpf/core.c"
+        ],
+        "additions": 14,
+        "deletions": 8,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=c77b30bd1dcb61f66c640ff7d2757816210c7cb0"
+      }
+    },
+    {
+      "id": "art_1774439411519_o1fgis5oz",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Open-code GGTT MMIO access protection",
+      "content": "提交: 01f2557\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:39-04:00\n标题: drm/xe: Open-code GGTT MMIO access protection\n修改的文件:\n- drivers/gpu/drm/xe/xe_ggtt.c\n- drivers/gpu/drm/xe/xe_ggtt_types.h\n统计: +8 -7",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=01f2557aa684e514005541e71a3d01f4cd45c170",
+      "author": "Matthew Brost",
+      "fetchedAt": "2026-03-25T11:50:11.519Z",
+      "gitCommitData": {
+        "hash": "01f2557aa684e514005541e71a3d01f4cd45c170",
+        "shortHash": "01f2557",
+        "title": "drm/xe: Open-code GGTT MMIO access protection",
+        "author": "Matthew Brost",
+        "authorEmail": "matthew.brost@intel.com",
+        "date": "2026-03-10T18:50:39-04:00",
+        "content": "提交: 01f2557\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:39-04:00\n标题: drm/xe: Open-code GGTT MMIO access protection\n修改的文件:\n- drivers/gpu/drm/xe/xe_ggtt.c\n- drivers/gpu/drm/xe/xe_ggtt_types.h\n统计: +8 -7",
+        "files": [
+          "drivers/gpu/drm/xe/xe_ggtt.c",
+          "drivers/gpu/drm/xe/xe_ggtt_types.h"
+        ],
+        "additions": 8,
+        "deletions": 7,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=01f2557aa684e514005541e71a3d01f4cd45c170"
+      }
+    },
+    {
+      "id": "art_1774439411684_5holulop7",
+      "sourceName": "Mainline",
+      "title": "drm/xe/guc: Ensure CT state transitions via STOP before DISABLED",
+      "content": "提交: 7838dd8\n作者: Zhanjun Dong <zhanjun.dong@intel.com>\n日期: 2026-03-10T18:50:37-04:00\n标题: drm/xe/guc: Ensure CT state transitions via STOP before DISABLED\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_ct.c\n统计: +1 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7838dd8367419e9fc43b79c038321cb3c04de2a2",
+      "author": "Zhanjun Dong",
+      "fetchedAt": "2026-03-25T11:50:11.684Z",
+      "gitCommitData": {
+        "hash": "7838dd8367419e9fc43b79c038321cb3c04de2a2",
+        "shortHash": "7838dd8",
+        "title": "drm/xe/guc: Ensure CT state transitions via STOP before DISABLED",
+        "author": "Zhanjun Dong",
+        "authorEmail": "zhanjun.dong@intel.com",
+        "date": "2026-03-10T18:50:37-04:00",
+        "content": "提交: 7838dd8\n作者: Zhanjun Dong <zhanjun.dong@intel.com>\n日期: 2026-03-10T18:50:37-04:00\n标题: drm/xe/guc: Ensure CT state transitions via STOP before DISABLED\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_ct.c\n统计: +1 -0",
+        "files": [
+          "drivers/gpu/drm/xe/xe_guc_ct.c"
+        ],
+        "additions": 1,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7838dd8367419e9fc43b79c038321cb3c04de2a2"
+      }
+    },
+    {
+      "id": "art_1774439411726_7vv00457n",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Trigger queue cleanup if not in wedged mode 2",
+      "content": "提交: e0f8265\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:35-04:00\n标题: drm/xe: Trigger queue cleanup if not in wedged mode 2\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +22 -13",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e0f82655df6fbb15b318e9d56724cd54b1cfb04d",
+      "author": "Matthew Brost",
+      "fetchedAt": "2026-03-25T11:50:11.726Z",
+      "gitCommitData": {
+        "hash": "e0f82655df6fbb15b318e9d56724cd54b1cfb04d",
+        "shortHash": "e0f8265",
+        "title": "drm/xe: Trigger queue cleanup if not in wedged mode 2",
+        "author": "Matthew Brost",
+        "authorEmail": "matthew.brost@intel.com",
+        "date": "2026-03-10T18:50:35-04:00",
+        "content": "提交: e0f8265\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:35-04:00\n标题: drm/xe: Trigger queue cleanup if not in wedged mode 2\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +22 -13",
+        "files": [
+          "drivers/gpu/drm/xe/xe_guc_submit.c"
+        ],
+        "additions": 22,
+        "deletions": 13,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e0f82655df6fbb15b318e9d56724cd54b1cfb04d"
+      }
+    },
+    {
+      "id": "art_1774439411768_lpw10ivx3",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Forcefully tear down exec queues in GuC submit fini",
+      "content": "提交: fb37386\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:34-04:00\n标题: drm/xe: Forcefully tear down exec queues in GuC submit fini\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc.c\n- drivers/gpu/drm/xe/xe_guc.h\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +63 -12",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=fb3738693cbdce104bf12615e980a6a37ff9087d",
+      "author": "Matthew Brost",
+      "fetchedAt": "2026-03-25T11:50:11.768Z",
+      "gitCommitData": {
+        "hash": "fb3738693cbdce104bf12615e980a6a37ff9087d",
+        "shortHash": "fb37386",
+        "title": "drm/xe: Forcefully tear down exec queues in GuC submit fini",
+        "author": "Matthew Brost",
+        "authorEmail": "matthew.brost@intel.com",
+        "date": "2026-03-10T18:50:34-04:00",
+        "content": "提交: fb37386\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:34-04:00\n标题: drm/xe: Forcefully tear down exec queues in GuC submit fini\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc.c\n- drivers/gpu/drm/xe/xe_guc.h\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +63 -12",
+        "files": [
+          "drivers/gpu/drm/xe/xe_guc.c",
+          "drivers/gpu/drm/xe/xe_guc.h",
+          "drivers/gpu/drm/xe/xe_guc_submit.c"
+        ],
+        "additions": 63,
+        "deletions": 12,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=fb3738693cbdce104bf12615e980a6a37ff9087d"
+      }
+    },
+    {
+      "id": "art_1774439411811_gy365jok6",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Always kill exec queues in xe_guc_submit_pause_abort",
+      "content": "提交: 26c638d\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:33-04:00\n标题: drm/xe: Always kill exec queues in xe_guc_submit_pause_abort\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +1 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=26c638d5602e329e0b26281a74c6ec69dee12f23",
+      "author": "Matthew Brost",
+      "fetchedAt": "2026-03-25T11:50:11.811Z",
+      "gitCommitData": {
+        "hash": "26c638d5602e329e0b26281a74c6ec69dee12f23",
+        "shortHash": "26c638d",
+        "title": "drm/xe: Always kill exec queues in xe_guc_submit_pause_abort",
+        "author": "Matthew Brost",
+        "authorEmail": "matthew.brost@intel.com",
+        "date": "2026-03-10T18:50:33-04:00",
+        "content": "提交: 26c638d\n作者: Matthew Brost <matthew.brost@intel.com>\n日期: 2026-03-10T18:50:33-04:00\n标题: drm/xe: Always kill exec queues in xe_guc_submit_pause_abort\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc_submit.c\n统计: +1 -2",
+        "files": [
+          "drivers/gpu/drm/xe/xe_guc_submit.c"
+        ],
+        "additions": 1,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=26c638d5602e329e0b26281a74c6ec69dee12f23"
+      }
+    },
+    {
+      "id": "art_1774439411181_uglmfdyp0",
+      "sourceName": "Mainline",
+      "title": "i2c: cp2615: fix serial string NULL-deref at probe",
+      "content": "提交: aa79f99\n作者: Johan Hovold <johan@kernel.org>\n日期: 2026-03-09T08:50:16+01:00\n标题: i2c: cp2615: fix serial string NULL-deref at probe\n修改的文件:\n- drivers/i2c/busses/i2c-cp2615.c\n统计: +3 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=aa79f996eb41e95aed85a1bd7f56bcd6a3842008",
+      "author": "Johan Hovold",
+      "fetchedAt": "2026-03-25T11:50:11.181Z",
+      "gitCommitData": {
+        "hash": "aa79f996eb41e95aed85a1bd7f56bcd6a3842008",
+        "shortHash": "aa79f99",
+        "title": "i2c: cp2615: fix serial string NULL-deref at probe",
+        "author": "Johan Hovold",
+        "authorEmail": "johan@kernel.org",
+        "date": "2026-03-09T08:50:16+01:00",
+        "content": "提交: aa79f99\n作者: Johan Hovold <johan@kernel.org>\n日期: 2026-03-09T08:50:16+01:00\n标题: i2c: cp2615: fix serial string NULL-deref at probe\n修改的文件:\n- drivers/i2c/busses/i2c-cp2615.c\n统计: +3 -0",
+        "files": [
+          "drivers/i2c/busses/i2c-cp2615.c"
+        ],
+        "additions": 3,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=aa79f996eb41e95aed85a1bd7f56bcd6a3842008"
+      }
+    },
+    {
+      "id": "art_1774439410540_dzh7shi11",
+      "sourceName": "Mainline",
+      "title": "tracing: Revert \"tracing: Remove pid in task_rename tracing output\"",
+      "content": "提交: a6f22e5\n作者: Xuewen Yan <xuewen.yan@unisoc.com>\n日期: 2026-03-06T15:59:54+08:00\n标题: tracing: Revert \"tracing: Remove pid in task_rename tracing output\"\n修改的文件:\n- include/trace/events/task.h\n统计: +5 -2",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a6f22e50c7d51aa225c392c62c33f0fae11f734d",
+      "author": "Xuewen Yan",
+      "fetchedAt": "2026-03-25T11:50:10.540Z",
+      "gitCommitData": {
+        "hash": "a6f22e50c7d51aa225c392c62c33f0fae11f734d",
+        "shortHash": "a6f22e5",
+        "title": "tracing: Revert \"tracing: Remove pid in task_rename tracing output\"",
+        "author": "Xuewen Yan",
+        "authorEmail": "xuewen.yan@unisoc.com",
+        "date": "2026-03-06T15:59:54+08:00",
+        "content": "提交: a6f22e5\n作者: Xuewen Yan <xuewen.yan@unisoc.com>\n日期: 2026-03-06T15:59:54+08:00\n标题: tracing: Revert \"tracing: Remove pid in task_rename tracing output\"\n修改的文件:\n- include/trace/events/task.h\n统计: +5 -2",
+        "files": [
+          "include/trace/events/task.h"
+        ],
+        "additions": 5,
+        "deletions": 2,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a6f22e50c7d51aa225c392c62c33f0fae11f734d"
+      }
+    },
+    {
+      "id": "art_1774439411644_hx2nqxnm4",
+      "sourceName": "Mainline",
+      "title": "drm/xe: Skip over non leaf pte for PRL generation",
+      "content": "提交: 38b8dcd\n作者: Brian Nguyen <brian3.nguyen@intel.com>\n日期: 2026-03-05T17:15:48Z\n标题: drm/xe: Skip over non leaf pte for PRL generation\n修改的文件:\n- drivers/gpu/drm/xe/xe_pt.c\n统计: +29 -9",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=38b8dcde231641f00eee977d245dbfe5f6b06e11",
+      "author": "Brian Nguyen",
+      "fetchedAt": "2026-03-25T11:50:11.644Z",
+      "gitCommitData": {
+        "hash": "38b8dcde231641f00eee977d245dbfe5f6b06e11",
+        "shortHash": "38b8dcd",
+        "title": "drm/xe: Skip over non leaf pte for PRL generation",
+        "author": "Brian Nguyen",
+        "authorEmail": "brian3.nguyen@intel.com",
+        "date": "2026-03-05T17:15:48Z",
+        "content": "提交: 38b8dcd\n作者: Brian Nguyen <brian3.nguyen@intel.com>\n日期: 2026-03-05T17:15:48Z\n标题: drm/xe: Skip over non leaf pte for PRL generation\n修改的文件:\n- drivers/gpu/drm/xe/xe_pt.c\n统计: +29 -9",
+        "files": [
+          "drivers/gpu/drm/xe/xe_pt.c"
+        ],
+        "additions": 29,
+        "deletions": 9,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=38b8dcde231641f00eee977d245dbfe5f6b06e11"
+      }
+    },
+    {
+      "id": "art_1774439410327_uv1w11ztl",
+      "sourceName": "Mainline",
+      "title": "i2c: tegra: Don't mark devices with pins as IRQ safe",
+      "content": "提交: ec69c9e\n作者: Mikko Perttunen <mperttunen@nvidia.com>\n日期: 2026-03-03T13:32:11+09:00\n标题: i2c: tegra: Don't mark devices with pins as IRQ safe\n修改的文件:\n- drivers/i2c/busses/Kconfig\n- drivers/i2c/busses/i2c-tegra.c\n统计: +6 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ec69c9e88315c4be70c283f18c2ff130da6320b5",
+      "author": "Mikko Perttunen",
+      "fetchedAt": "2026-03-25T11:50:10.327Z",
+      "gitCommitData": {
+        "hash": "ec69c9e88315c4be70c283f18c2ff130da6320b5",
+        "shortHash": "ec69c9e",
+        "title": "i2c: tegra: Don't mark devices with pins as IRQ safe",
+        "author": "Mikko Perttunen",
+        "authorEmail": "mperttunen@nvidia.com",
+        "date": "2026-03-03T13:32:11+09:00",
+        "content": "提交: ec69c9e\n作者: Mikko Perttunen <mperttunen@nvidia.com>\n日期: 2026-03-03T13:32:11+09:00\n标题: i2c: tegra: Don't mark devices with pins as IRQ safe\n修改的文件:\n- drivers/i2c/busses/Kconfig\n- drivers/i2c/busses/i2c-tegra.c\n统计: +6 -1",
+        "files": [
+          "drivers/i2c/busses/Kconfig",
+          "drivers/i2c/busses/i2c-tegra.c"
+        ],
+        "additions": 6,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ec69c9e88315c4be70c283f18c2ff130da6320b5"
+      }
+    },
+    {
+      "id": "art_1774439411853_75vc3ki0q",
+      "sourceName": "Mainline",
+      "title": "drm/xe/guc: Fail immediately on GuC load error",
+      "content": "提交: 9b72283\n作者: Daniele Ceraolo Spurio <daniele.ceraolospurio@intel.com>\n日期: 2026-03-02T16:17:33-08:00\n标题: drm/xe/guc: Fail immediately on GuC load error\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc.c\n统计: +3 -3",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=9b72283ec9b8685acdb3467de8fbc3352fdb70bb",
+      "author": "Daniele Ceraolo Spurio",
+      "fetchedAt": "2026-03-25T11:50:11.853Z",
+      "gitCommitData": {
+        "hash": "9b72283ec9b8685acdb3467de8fbc3352fdb70bb",
+        "shortHash": "9b72283",
+        "title": "drm/xe/guc: Fail immediately on GuC load error",
+        "author": "Daniele Ceraolo Spurio",
+        "authorEmail": "daniele.ceraolospurio@intel.com",
+        "date": "2026-03-02T16:17:33-08:00",
+        "content": "提交: 9b72283\n作者: Daniele Ceraolo Spurio <daniele.ceraolospurio@intel.com>\n日期: 2026-03-02T16:17:33-08:00\n标题: drm/xe/guc: Fail immediately on GuC load error\n修改的文件:\n- drivers/gpu/drm/xe/xe_guc.c\n统计: +3 -3",
+        "files": [
+          "drivers/gpu/drm/xe/xe_guc.c"
+        ],
+        "additions": 3,
+        "deletions": 3,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=9b72283ec9b8685acdb3467de8fbc3352fdb70bb"
+      }
+    },
+    {
+      "id": "art_1774439411140_h6raz5dsh",
+      "sourceName": "Mainline",
+      "title": "i2c: fsi: Fix a potential leak in fsi_i2c_probe()",
+      "content": "提交: be627ab\n作者: Christophe JAILLET <christophe.jaillet@wanadoo.fr>\n日期: 2026-03-01T17:21:01+01:00\n标题: i2c: fsi: Fix a potential leak in fsi_i2c_probe()\n修改的文件:\n- drivers/i2c/busses/i2c-fsi.c\n统计: +1 -0",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=be627abcc0d5dbd5882873bd85fbc18aa3d189ed",
+      "author": "Christophe JAILLET",
+      "fetchedAt": "2026-03-25T11:50:11.140Z",
+      "gitCommitData": {
+        "hash": "be627abcc0d5dbd5882873bd85fbc18aa3d189ed",
+        "shortHash": "be627ab",
+        "title": "i2c: fsi: Fix a potential leak in fsi_i2c_probe()",
+        "author": "Christophe JAILLET",
+        "authorEmail": "christophe.jaillet@wanadoo.fr",
+        "date": "2026-03-01T17:21:01+01:00",
+        "content": "提交: be627ab\n作者: Christophe JAILLET <christophe.jaillet@wanadoo.fr>\n日期: 2026-03-01T17:21:01+01:00\n标题: i2c: fsi: Fix a potential leak in fsi_i2c_probe()\n修改的文件:\n- drivers/i2c/busses/i2c-fsi.c\n统计: +1 -0",
+        "files": [
+          "drivers/i2c/busses/i2c-fsi.c"
+        ],
+        "additions": 1,
+        "deletions": 0,
+        "subsystem": "other",
+        "type": "bugfix",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=be627abcc0d5dbd5882873bd85fbc18aa3d189ed"
+      }
+    },
+    {
+      "id": "art_1774439411100_uuw4cjcym",
+      "sourceName": "Mainline",
+      "title": "i2c: pxa: defer reset on Armada 3700 when recovery is used",
+      "content": "提交: 78a6ee1\n作者: Gabor Juhos <j4g8y7@gmail.com>\n日期: 2026-02-26T14:11:27+01:00\n标题: i2c: pxa: defer reset on Armada 3700 when recovery is used\n修改的文件:\n- drivers/i2c/busses/i2c-pxa.c\n统计: +16 -1",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=78a6ee14f8b9e1c8f7c77612122444f3be8dc8cc",
+      "author": "Gabor Juhos",
+      "fetchedAt": "2026-03-25T11:50:11.100Z",
+      "gitCommitData": {
+        "hash": "78a6ee14f8b9e1c8f7c77612122444f3be8dc8cc",
+        "shortHash": "78a6ee1",
+        "title": "i2c: pxa: defer reset on Armada 3700 when recovery is used",
+        "author": "Gabor Juhos",
+        "authorEmail": "j4g8y7@gmail.com",
+        "date": "2026-02-26T14:11:27+01:00",
+        "content": "提交: 78a6ee1\n作者: Gabor Juhos <j4g8y7@gmail.com>\n日期: 2026-02-26T14:11:27+01:00\n标题: i2c: pxa: defer reset on Armada 3700 when recovery is used\n修改的文件:\n- drivers/i2c/busses/i2c-pxa.c\n统计: +16 -1",
+        "files": [
+          "drivers/i2c/busses/i2c-pxa.c"
+        ],
+        "additions": 16,
+        "deletions": 1,
+        "subsystem": "other",
+        "type": "other",
+        "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=78a6ee14f8b9e1c8f7c77612122444f3be8dc8cc"
+      }
+    }
+  ]
+}

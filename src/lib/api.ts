@@ -1,46 +1,22 @@
 export interface Article {
   id: string
-  sourceId: string
   sourceName: string
-  sourceUrl?: string
   title: string
   content?: string
-  summary?: string
   url?: string
   author?: string
-  publishedAt?: string
   fetchedAt: string
-  highlight?: boolean
   patchData?: LKMLPatch
   gitCommitData?: GitCommit
 }
 
-export interface Source {
-  id: string
-  name: string
-  type: string
-  url: string
-  category: string
-  active: boolean
-}
-
-export interface DayData {
+export interface SourceDayData {
   date: string
+  sourceName: string
+  sourceType: string
   generatedAt: string
   summary: string
   articles: Article[]
-  sources: Source[]
-}
-
-export interface LKMLMessage {
-  id: string
-  url: string
-  title: string
-  author: string
-  date: string
-  content: string
-  isReply: boolean
-  originalPatchUrl?: string
 }
 
 export interface LKMLPatch {
@@ -52,12 +28,20 @@ export interface LKMLPatch {
   content: string
   subsystem: string
   type: string
-  priority: string
   highlight: boolean
   summary: string
-  discussionSummary?: string
   messages: LKMLMessage[]
   replyCount: number
+}
+
+export interface LKMLMessage {
+  id: string
+  url: string
+  title: string
+  author: string
+  date: string
+  content: string
+  isReply: boolean
 }
 
 export interface GitCommit {
@@ -76,43 +60,41 @@ export interface GitCommit {
   url: string
 }
 
+export interface SourceDatesIndex {
+  [sourceName: string]: {
+    dates: string[]
+    lastUpdated: string
+  }
+}
+
+function sourceNameToFileName(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '-')
+}
+
 export const dayDataApi = {
-  getAvailableDates: async (): Promise<string[]> => {
+  getSourceDatesIndex: async (): Promise<SourceDatesIndex> => {
     try {
-      const response = await fetch('/dates.json')
+      const response = await fetch('/source-dates.json')
       if (response.ok) {
-        const data = await response.json()
-        return data.dates || []
+        return await response.json()
       }
-      return []
+      return {}
     } catch (error) {
-      console.error('获取日期列表失败:', error)
-      return []
+      console.error('获取数据源日期索引失败:', error)
+      return {}
     }
   },
 
-  getDataByDate: async (dateStr: string): Promise<DayData | null> => {
+  getSourceData: async (sourceName: string, dateStr: string): Promise<SourceDayData | null> => {
     try {
-      const response = await fetch(`/${dateStr}.json`)
+      const fileName = `${sourceNameToFileName(sourceName)}-${dateStr}.json`
+      const response = await fetch(`/${fileName}`)
       if (response.ok) {
         return await response.json()
       }
       return null
     } catch (error) {
-      console.error('读取数据失败:', error)
-      return null
-    }
-  },
-
-  getLatestData: async (): Promise<DayData | null> => {
-    try {
-      const dates = await dayDataApi.getAvailableDates()
-      if (dates.length === 0) return null
-      
-      const latestDate = dates[0]
-      return await dayDataApi.getDataByDate(latestDate)
-    } catch (error) {
-      console.error('读取最新数据失败:', error)
+      console.error('读取数据源数据失败:', error)
       return null
     }
   }

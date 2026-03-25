@@ -45,17 +45,12 @@ interface GitCommit {
 
 interface Article {
   id: string
-  sourceId: string
   sourceName: string
-  sourceUrl?: string
   title: string
   content?: string
-  summary?: string
   url?: string
   author?: string
-  publishedAt?: string
   fetchedAt: string
-  highlight?: boolean
   patchData?: LKMLPatch
   gitCommitData?: GitCommit
 }

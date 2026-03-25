@@ -1,8 +1,6 @@
 {
   "rewrites": [
-    { "source": "/:date", "destination": "/:date/index.html" },
-    { "source": "/:date/", "destination": "/:date/index.html" },
-    { "source": "/:date/linux-kernel", "destination": "/:date/linux-kernel/index.html" },
-    { "source": "/:date/linux-kernel/", "destination": "/:date/linux-kernel/index.html" }
+    { "source": "/:date/:source", "destination": "/:date/:source/index.html" },
+    { "source": "/:date/:source/", "destination": "/:date/:source/index.html" }
   ]
 }

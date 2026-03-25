@@ -3,140 +3,43 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loadSources = loadSources;
-exports.loadGlobalConfig = loadGlobalConfig;
 exports.loadSourcesConfig = loadSourcesConfig;
-exports.loadArticlesByDate = loadArticlesByDate;
-exports.loadAllProcessedArticles = loadAllProcessedArticles;
-exports.loadProcessedUrls = loadProcessedUrls;
-exports.saveProcessedUrls = saveProcessedUrls;
-exports.loadDayData = loadDayData;
-exports.loadCategoryData = loadCategoryData;
-exports.loadDatesIndex = loadDatesIndex;
-exports.updateDatesIndex = updateDatesIndex;
-exports.saveDayData = saveDayData;
-exports.saveCategoryData = saveCategoryData;
-exports.saveAllCategoryData = saveAllCategoryData;
+exports.loadSourceData = loadSourceData;
+exports.saveSourceData = saveSourceData;
+exports.updateSourceDatesIndex = updateSourceDatesIndex;
+exports.loadSourceDatesIndex = loadSourceDatesIndex;
 exports.getTodayString = getTodayString;
 exports.generateArticleId = generateArticleId;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const DATA_DIR = path_1.default.join(__dirname, '..', '..', '..', 'public');
 const SOURCES_CONFIG_PATH = path_1.default.join(__dirname, '..', '..', 'sources-config.json');
-const PROCESSED_FILE = path_1.default.join(DATA_DIR, 'processed-articles.json');
 function ensureDirectoryExists(dirPath) {
     if (!fs_1.default.existsSync(dirPath)) {
         fs_1.default.mkdirSync(dirPath, { recursive: true });
-    }
-}
-function loadSources() {
-    try {
-        if (!fs_1.default.existsSync(SOURCES_CONFIG_PATH)) {
-            console.error('[Storage] 信息源配置文件不存在:', SOURCES_CONFIG_PATH);
-            return [];
-        }
-        const content = fs_1.default.readFileSync(SOURCES_CONFIG_PATH, 'utf8');
-        const config = JSON.parse(content);
-        return config.sources || [];
-    }
-    catch (error) {
-        console.error('[Storage] 加载信息源配置失败:', error);
-        return [];
-    }
-}
-function loadGlobalConfig() {
-    const defaultConfig = {
-        defaultSummaryPrompt: '你是一个专业的信息总结助手。请用简洁的中文总结以下文章的核心内容，控制在100字以内。',
-        defaultCategorySummaryPrompt: '你是一个信息整合助手。请根据今日收集的文章，生成一份简洁的每日信息摘要。'
-    };
-    try {
-        if (!fs_1.default.existsSync(SOURCES_CONFIG_PATH)) {
-            return defaultConfig;
-        }
-        const content = fs_1.default.readFileSync(SOURCES_CONFIG_PATH, 'utf8');
-        const config = JSON.parse(content);
-        return config.globalConfig || defaultConfig;
-    }
-    catch (error) {
-        console.error('[Storage] 加载全局配置失败:', error);
-        return defaultConfig;
     }
 }
 function loadSourcesConfig() {
     try {
         if (!fs_1.default.existsSync(SOURCES_CONFIG_PATH)) {
             console.error('[Storage] 信息源配置文件不存在:', SOURCES_CONFIG_PATH);
-            return { globalConfig: loadGlobalConfig(), sources: [] };
+            return { sources: [] };
         }
         const content = fs_1.default.readFileSync(SOURCES_CONFIG_PATH, 'utf8');
         return JSON.parse(content);
     }
     catch (error) {
         console.error('[Storage] 加载信息源配置失败:', error);
-        return { globalConfig: loadGlobalConfig(), sources: [] };
+        return { sources: [] };
     }
 }
-function loadArticlesByDate(dateStr) {
+function sourceNameToFileName(name) {
+    return name.toLowerCase().replace(/\s+/g, '-');
+}
+function loadSourceData(sourceName, dateStr) {
     try {
-        const filePath = path_1.default.join(DATA_DIR, `${dateStr}.json`);
-        if (!fs_1.default.existsSync(filePath)) {
-            return [];
-        }
-        const content = fs_1.default.readFileSync(filePath, 'utf8');
-        const data = JSON.parse(content);
-        return data.articles || [];
-    }
-    catch (error) {
-        console.error('[Storage] 加载文章失败:', error);
-        return [];
-    }
-}
-function loadAllProcessedArticles() {
-    const articles = [];
-    try {
-        if (!fs_1.default.existsSync(DATA_DIR)) {
-            return articles;
-        }
-        const files = fs_1.default.readdirSync(DATA_DIR);
-        const dateFiles = files.filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
-        for (const file of dateFiles) {
-            const dateStr = file.replace('.json', '');
-            const dayArticles = loadArticlesByDate(dateStr);
-            articles.push(...dayArticles);
-        }
-        return articles;
-    }
-    catch (error) {
-        console.error('[Storage] 加载所有文章失败:', error);
-        return articles;
-    }
-}
-function loadProcessedUrls() {
-    try {
-        if (!fs_1.default.existsSync(PROCESSED_FILE)) {
-            return new Set();
-        }
-        const content = fs_1.default.readFileSync(PROCESSED_FILE, 'utf8');
-        const data = JSON.parse(content);
-        return new Set(data.urls || []);
-    }
-    catch (error) {
-        console.error('[Storage] 加载已处理URL失败:', error);
-        return new Set();
-    }
-}
-function saveProcessedUrls(urls) {
-    ensureDirectoryExists(DATA_DIR);
-    const data = {
-        lastUpdated: new Date().toISOString(),
-        urls: Array.from(urls)
-    };
-    fs_1.default.writeFileSync(PROCESSED_FILE, JSON.stringify(data, null, 2), 'utf8');
-    console.log(`[Storage] 已处理URL已保存: ${urls.size} 条`);
-}
-function loadDayData(dateStr) {
-    try {
-        const filePath = path_1.default.join(DATA_DIR, `${dateStr}.json`);
+        const fileName = `${sourceNameToFileName(sourceName)}-${dateStr}.json`;
+        const filePath = path_1.default.join(DATA_DIR, fileName);
         if (!fs_1.default.existsSync(filePath)) {
             return null;
         }
@@ -144,96 +47,56 @@ function loadDayData(dateStr) {
         return JSON.parse(content);
     }
     catch (error) {
-        console.error('[Storage] 加载每日数据失败:', error);
+        console.error('[Storage] 加载数据源数据失败:', error);
         return null;
     }
 }
-function loadCategoryData(category, dateStr) {
-    try {
-        const filePath = path_1.default.join(DATA_DIR, `${category}-${dateStr}.json`);
-        if (!fs_1.default.existsSync(filePath)) {
-            return null;
-        }
-        const content = fs_1.default.readFileSync(filePath, 'utf8');
-        return JSON.parse(content);
-    }
-    catch (error) {
-        console.error('[Storage] 加载分类数据失败:', error);
-        return null;
-    }
-}
-function loadDatesIndex() {
-    try {
-        const filePath = path_1.default.join(DATA_DIR, 'dates.json');
-        if (!fs_1.default.existsSync(filePath)) {
-            return null;
-        }
-        const content = fs_1.default.readFileSync(filePath, 'utf8');
-        return JSON.parse(content);
-    }
-    catch (error) {
-        console.error('[Storage] 加载日期索引失败:', error);
-        return null;
-    }
-}
-function updateDatesIndex() {
+function saveSourceData(data) {
     ensureDirectoryExists(DATA_DIR);
-    if (!fs_1.default.existsSync(DATA_DIR)) {
-        return;
-    }
-    const files = fs_1.default.readdirSync(DATA_DIR);
-    const dateFiles = files.filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
-    const dates = dateFiles.map(f => f.replace('.json', '')).sort().reverse();
-    const index = {
-        dates,
-        lastUpdated: new Date().toISOString()
-    };
-    const filePath = path_1.default.join(DATA_DIR, 'dates.json');
-    fs_1.default.writeFileSync(filePath, JSON.stringify(index, null, 2), 'utf8');
-    console.log(`[Storage] 日期索引已更新: ${dates.length} 个日期`);
-}
-function saveDayData(data) {
-    ensureDirectoryExists(DATA_DIR);
-    const filePath = path_1.default.join(DATA_DIR, `${data.date}.json`);
+    const fileName = `${sourceNameToFileName(data.sourceName)}-${data.date}.json`;
+    const filePath = path_1.default.join(DATA_DIR, fileName);
     fs_1.default.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     console.log(`[Storage] 数据已保存: ${filePath}`);
-    updateDatesIndex();
+    updateSourceDatesIndex(data.sourceName, data.date);
 }
-function saveCategoryData(data) {
+function updateSourceDatesIndex(sourceName, dateStr) {
     ensureDirectoryExists(DATA_DIR);
-    const filePath = path_1.default.join(DATA_DIR, `${data.category}-${data.date}.json`);
-    fs_1.default.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    console.log(`[Storage] 分类数据已保存: ${filePath}`);
+    const indexPath = path_1.default.join(DATA_DIR, 'source-dates.json');
+    let index = {};
+    if (fs_1.default.existsSync(indexPath)) {
+        try {
+            const content = fs_1.default.readFileSync(indexPath, 'utf8');
+            index = JSON.parse(content);
+        }
+        catch {
+            index = {};
+        }
+    }
+    const key = sourceNameToFileName(sourceName);
+    if (!index[key]) {
+        index[key] = { dates: [], lastUpdated: '' };
+    }
+    if (!index[key].dates.includes(dateStr)) {
+        index[key].dates.push(dateStr);
+        index[key].dates.sort().reverse();
+    }
+    index[key].lastUpdated = new Date().toISOString();
+    fs_1.default.writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf8');
+    console.log(`[Storage] 数据源日期索引已更新: ${sourceName} - ${index[key].dates.length} 个日期`);
 }
-function saveAllCategoryData(articles, sources, dateStr, summaries = {}) {
-    ensureDirectoryExists(DATA_DIR);
-    const categoryArticles = {};
-    const categorySources = {};
-    articles.forEach(article => {
-        const source = sources.find(s => s.id === article.sourceId);
-        const category = source?.category || '未分类';
-        if (!categoryArticles[category]) {
-            categoryArticles[category] = [];
-            categorySources[category] = [];
+function loadSourceDatesIndex() {
+    try {
+        const filePath = path_1.default.join(DATA_DIR, 'source-dates.json');
+        if (!fs_1.default.existsSync(filePath)) {
+            return {};
         }
-        categoryArticles[category].push(article);
-        if (!categorySources[category].find(s => s.id === source?.id)) {
-            if (source) {
-                categorySources[category].push(source);
-            }
-        }
-    });
-    Object.keys(categoryArticles).forEach(category => {
-        const data = {
-            category,
-            date: dateStr,
-            generatedAt: new Date().toISOString(),
-            summary: summaries[category] || '',
-            articles: categoryArticles[category],
-            sources: categorySources[category]
-        };
-        saveCategoryData(data);
-    });
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        return JSON.parse(content);
+    }
+    catch (error) {
+        console.error('[Storage] 加载数据源日期索引失败:', error);
+        return {};
+    }
 }
 function getTodayString() {
     const today = new Date();

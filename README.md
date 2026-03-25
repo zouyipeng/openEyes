@@ -1,26 +1,23 @@
-# LKML Fetcher 🐧
+# openEyes 🐧
 
-一个专注于Linux Kernel Mailing List补丁抓取与展示的工具。
+Linux Kernel 社区动态追踪工具，支持邮件列表和主线代码合入监控。
 
 ## ✨ 功能特性
 
-- **LKML补丁抓取**
-  - 自动抓取Linux Kernel邮件列表中的补丁
-  - 智能识别补丁类型（Feature/Bugfix/Other）
-  - 解析补丁详情（commit message、修改文件）
-  - 支持并发抓取，自动限速避免429错误
+- **多数据源支持**
+  - LKML 邮件列表补丁抓取
+  - Git 仓库主线代码合入监控
+  - 数据源独立存储和展示
 
-- **AI智能总结**
+- **AI 智能总结**
   - 自动生成补丁摘要
-  - 每日补丁动态总结
-  - 支持OpenAI兼容API
+  - 支持自定义摘要提示词
+  - 支持 OpenAI 兼容 API
 
 - **信息展示**
-  - 按类型分组展示补丁
-  - 补丁统计信息
-  - Markdown格式渲染
+  - 按类型分组展示（Feature/Bugfix/Other）
+  - Git 提交统计（新增/删除行数）
   - 移动端适配
-  - 明亮主题
 
 ## 🛠️ 技术栈
 
@@ -30,7 +27,7 @@
 | 语言 | TypeScript |
 | 样式 | Tailwind CSS |
 | 数据存储 | JSON 文件 |
-| 信息抓取 | Axios + Cheerio |
+| 信息抓取 | Axios + Cheerio + simple-git |
 | AI | OpenAI API (兼容 MiniMax 等) |
 
 ## 📦 安装
@@ -64,36 +61,34 @@ cd backend && npm install && cd ..
 }
 ```
 
-支持 OpenAI 兼容的 API（如 MiniMax）：
-
-```json
-{
-  "openai": {
-    "apiKey": "your-minimax-key",
-    "baseURL": "https://api.minimaxi.com/v1",
-    "model": "MiniMax-M2.7",
-    "maxTokens": 4096
-  }
-}
-```
-
 ### 2. 配置信息源
 
-编辑 `backend/sources-config.json`（默认已配置好LKML源）：
+编辑 `backend/sources-config.json`：
 
 ```json
 {
   "sources": [
     {
-      "id": "lkml-today",
-      "name": "Linux Kernel Mailing List",
+      "name": "Mailing List",
       "type": "lkml",
       "url": "https://lkml.org/",
-      "category": "linux kernel",
       "active": true,
       "excludeAuthors": ["kernel test robot"],
       "lkmlDetailConcurrency": 12,
       "lkmlDetailTimeoutMs": 8000
+    },
+    {
+      "name": "Mainline",
+      "type": "git",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git",
+      "active": true,
+      "gitConfig": {
+        "branch": "master",
+        "sinceDays": 7,
+        "maxCommits": 200,
+        "localPath": "/path/to/linux"
+      },
+      "summaryPrompt": "自定义摘要提示词..."
     }
   ]
 }
@@ -104,20 +99,20 @@ cd backend && npm install && cd ..
 ### 开发模式
 
 ```bash
-# 终端1：启动前端 (默认端口 3000)
+# 终端1：启动前端
 npm run dev
 
-# 终端2：抓取补丁
-cd backend && npx tsx src/cli/index.ts fetch
+# 终端2：抓取数据
+cd backend && npm run fetch all
 ```
 
 ### 生产部署
 
 ```bash
-# 构建前端项目
+# 构建前端
 npm run build
 
-# 启动静态文件服务器 (默认端口 3000)
+# 启动静态服务器
 npx serve out
 ```
 
@@ -126,144 +121,54 @@ npx serve out
 ```bash
 cd backend
 
-# 抓取Linux kernel补丁
-npx tsx src/cli/index.ts fetch
+# 全量抓取所有信息源
+npm run fetch -- all
 
-# 强制抓取（忽略已处理记录）
-npx tsx src/cli/index.ts fetch --force
+# 为指定信息源重新生成摘要
+npm run fetch -- summary --source "Mailing List"
+npm run fetch -- summary --source "Mainline" --date 2026-03-25
 
-# 调试模式（限制抓取数量）
-npx tsx src/cli/index.ts fetch --debug
-
-# 生成补丁摘要
-npx tsx src/cli/index.ts summary
-
-# 列出所有信息源
-npx tsx src/cli/index.ts list:sources
-
-# 列出已处理的补丁 URL
-npx tsx src/cli/index.ts list:processed
-
-# 清除已处理的补丁记录
-npx tsx src/cli/index.ts clear:processed
+# 查看帮助
+npm run fetch -- help
 ```
-
-访问 http://localhost:3000 查看应用。
 
 ## 📁 项目结构
 
 ```
 openEyes/
-├── backend/                    # 后端服务
+├── backend/
 │   ├── src/
-│   │   ├── cli/               # CLI 命令
-│   │   │   └── index.ts       # 抓取、摘要等命令
-│   │   └── lib/               # 工具库
+│   │   ├── cli/index.ts       # CLI 入口
+│   │   └── lib/
 │   │       ├── ai.ts          # AI 总结
-│   │       ├── fetcher.ts     # LKML 抓取
-│   │       └── storage.ts     # JSON 存储
+│   │       ├── fetcher.ts     # 数据抓取
+│   │       └── storage.ts     # 存储管理
 │   ├── config.json            # AI 配置
 │   └── sources-config.json    # 信息源配置
-├── public/                    # 静态资源和数据
-│   ├── linux kernel-YYYY-MM-DD.json  # 补丁数据文件
-│   ├── processed-articles.json # 已处理补丁记录
-│   └── dates.json             # 可用日期索引
-├── src/                       # 前端
+├── public/
+│   ├── mailing-list-YYYY-MM-DD.json  # LKML 数据
+│   ├── mainline-YYYY-MM-DD.json      # Git 数据
+│   ├── source-dates.json             # 日期索引
+│   └── serve.json                    # 静态服务配置
+├── src/
 │   ├── app/
-│   │   ├── page.tsx          # 首页
-│   │   └── layout.tsx        # 布局
-│   ├── components/           # 组件
-│   │   ├── LKMLPatchCard.tsx # 补丁卡片
-│   │   ├── NewsDashboard.tsx # 主面板
-│   │   └── PenguinIcon.tsx   # Linux企鹅图标
-│   └── lib/
-│       ├── api.ts            # 前端 API
-│       └── lkmlAnchor.ts     # 锚点工具
+│   │   ├── page.tsx           # 首页
+│   │   └── [date]/[source]/   # 动态路由
+│   ├── components/
+│   │   ├── SourceDashboard.tsx
+│   │   └── LKMLPatchCard.tsx
+│   └── lib/api.ts
 └── README.md
 ```
 
-## 📡 API 访问
-
-### 按日期访问数据
-
-应用支持多种方式访问不同日期的补丁数据：
-
-#### 1. URL路径访问（推荐）
-
-直接通过URL路径访问特定日期的数据：
+## 📡 URL 访问
 
 ```
-https://localhost:3000/2026-03-24    # 访问2026-03-24的补丁数据
-https://localhost:3000/2026-03-22    # 访问2026-03-22的补丁数据
-https://localhost:3000/2026-03-21    # 访问2026-03-21的补丁数据
+http://localhost:3000                           # 首页
+http://localhost:3000/2026-03-25/mailing-list   # LKML 数据
+http://localhost:3000/2026-03-25/mainline       # Git 数据
 ```
-
-#### 2. 日期选择器
-
-在页面顶部使用日期下拉选择器切换不同日期的数据。
-
-#### 3. 编程接口
-
-```typescript
-// 获取可用日期列表
-const dates = await dayDataApi.getAvailableDates()
-// 返回: ["2026-03-24", "2026-03-22", "2026-03-21"]
-
-// 获取指定日期的数据
-const data = await dayDataApi.getDataByDate('2026-03-24')
-// 返回: DayData对象
-
-// 获取最新数据
-const latestData = await dayDataApi.getLatestData()
-```
-
-### 数据文件格式
-
-#### 补丁数据文件 (public/linux kernel-YYYY-MM-DD.json)
-
-```json
-{
-  "date": "2026-03-24",
-  "generatedAt": "2026-03-24T10:00:00Z",
-  "summary": "## 今日社区动态\n...",
-  "articles": [
-    {
-      "id": "patch-id",
-      "title": "补丁标题",
-      "url": "补丁链接",
-      "author": "作者",
-      "content": "补丁内容",
-      "patchData": {
-        "type": "feature",
-        "commitMessage": "...",
-        "changedFiles": ["file1.c", "file2.h"]
-      }
-    }
-  ],
-  "sources": [...]
-}
-```
-
-## 📝 开发计划
-
-- [x] LKML补丁抓取
-- [x] 补丁类型识别
-- [x] AI智能总结
-- [x] 补丁分组展示
-- [ ] 定时任务自动抓取
-- [ ] 补丁详情页
-- [ ] 搜索功能
-- [ ] 订阅特定子系统
 
 ## 📄 License
 
 ISC
-
-## 👥 Contributors
-
-- Yipeng Zou <403650485@qq.com>
-- Trae AI Assistant
-
----
-
-**LKML Fetcher** - 让Linux kernel补丁触手可及 🐧
