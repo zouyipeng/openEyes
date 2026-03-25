@@ -588,7 +588,7 @@ export async function fetchGitRepo(source: Source, force: boolean = false, debug
         deletions,
         subsystem: subsystem as any,
         type: type as any,
-        url: `${source.url}/commit/${hash}`
+        url: `https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=${hash}`
       }
 
       const article: Article = {
