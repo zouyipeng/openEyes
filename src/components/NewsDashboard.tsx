@@ -74,20 +74,22 @@ function LkmlTypeStatsBar({ articles }: { articles: any[] }) {
 
   return (
     <div className="mb-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-      <span className="text-slate-500 mr-2">今日补丁</span>
-      <span className="text-slate-900 font-medium">{stats.total}</span>
-      <span className="text-slate-300 mx-2">·</span>
-      <span className="text-emerald-600">Feature {stats.feature}</span>
-      <span className="text-slate-300 mx-2">·</span>
-      <span className="text-rose-600">Bugfix {stats.bugfix}</span>
-      <span className="text-slate-300 mx-2">·</span>
-      <span className="text-slate-500">Other {stats.other}</span>
-      {stats.dateRange && (
-        <>
-          <span className="text-slate-300 mx-2">·</span>
-          <span className="text-slate-500">{stats.dateRange}</span>
-        </>
-      )}
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-1 sm:gap-x-0">
+        <span className="text-slate-500 mr-1 sm:mr-2">今日补丁</span>
+        <span className="text-slate-900 font-medium">{stats.total}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-emerald-600">Feature {stats.feature}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-rose-600">Bugfix {stats.bugfix}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-slate-500">Other {stats.other}</span>
+        {stats.dateRange && (
+          <>
+            <span className="text-slate-300 mx-1 sm:mx-2 hidden sm:inline">·</span>
+            <span className="text-slate-500 hidden sm:inline">{stats.dateRange}</span>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -366,15 +368,15 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
             {availableDates.length > 0 && (
               <select
                 value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-                style={{ minWidth: '140px' }}
+                className="bg-white border border-slate-300 rounded-lg px-2 sm:px-3 py-1.5 text-sm text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                style={{ minWidth: '120px' }}
               >
                 {availableDates.map(date => (
                   <option key={date} value={date}>
@@ -383,18 +385,18 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
                 ))}
               </select>
             )}
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-wide text-slate-900">
-              <PenguinIcon className="h-[18px] w-[18px] shrink-0" />
+            <h1 className="flex items-center gap-2 text-base sm:text-lg font-semibold tracking-wide text-slate-900">
+              <PenguinIcon className="h-[16px] w-[16px] sm:h-[18px] sm:w-[18px] shrink-0" />
               <span>Linux Kernel动态</span>
             </h1>
           </div>
-          <span className="text-sm text-slate-500">共 {articles.length} 篇</span>
+          <span className="text-sm text-slate-500 sm:text-right">共 {articles.length} 篇</span>
         </div>
 
         {summary && (
-          <div className="bg-white rounded-xl p-4 mb-6 border border-slate-200 shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0">💡</span>
+          <div className="bg-white rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200 shadow-sm">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <span className="text-xl sm:text-2xl flex-shrink-0">💡</span>
               <div className="flex-1 prose prose-sm max-w-none">
                 <ReactMarkdown components={categorySummaryComponents}>{summary}</ReactMarkdown>
               </div>
@@ -403,8 +405,8 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
         )}
 
         {articles.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">📭</div>
+          <div className="text-center py-12 sm:py-16">
+            <div className="text-4xl sm:text-5xl mb-4">📭</div>
             <h3 className="text-base font-medium text-slate-700 mb-2">暂无内容</h3>
             <p className="text-sm text-slate-500">还没有抓取到Linux kernel补丁</p>
           </div>

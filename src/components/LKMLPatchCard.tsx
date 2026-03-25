@@ -82,13 +82,13 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
     return (
       <div
         id={anchorId}
-        className={`scroll-mt-24 bg-white rounded-lg p-2.5 border hover:border-slate-300 transition-all duration-300 ${
+        className={`scroll-mt-20 sm:scroll-mt-24 bg-white rounded-lg p-2.5 border hover:border-slate-300 transition-all duration-300 ${
           isJumpHighlighted
             ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
             : 'border-slate-200'
         }`}
       >
-        <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
+        <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-[12px] leading-5">
           <h3 className="min-w-0 flex-1 text-slate-900 font-medium">
             {article.url ? (
               <a
@@ -106,8 +106,10 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
               </span>
             )}
           </h3>
-          {article.author && <span className="text-slate-500 shrink-0 truncate max-w-[140px]">{article.author}</span>}
-          {article.fetchedAt && <span className="text-slate-400 shrink-0">{formatDate(article.fetchedAt)}</span>}
+          <div className="flex items-center gap-2 text-slate-400 shrink-0">
+            {article.author && <span className="text-slate-500 truncate max-w-[100px] sm:max-w-[140px]">{article.author}</span>}
+            {article.fetchedAt && <span>{formatDate(article.fetchedAt)}</span>}
+          </div>
         </div>
       </div>
     )
@@ -116,7 +118,7 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
   return (
     <div
       id={anchorId}
-      className={`scroll-mt-24 bg-white rounded-lg p-2.5 border transition-all duration-300 ${
+      className={`scroll-mt-20 sm:scroll-mt-24 bg-white rounded-lg p-2.5 border transition-all duration-300 ${
         isJumpHighlighted
           ? 'border-sky-400 ring-2 ring-sky-400/50 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
           : patch.highlight
@@ -124,25 +126,29 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
             : 'border-slate-200 hover:border-slate-300'
       }`}
     >
-      <div className="min-w-0 flex items-center gap-2 text-[12px] leading-5 whitespace-nowrap">
-        <span
-          className={`px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 ${typeColor[patch.type] || typeColor.other}`}
-        >
-          {typeLabel[patch.type] || patch.type}
-        </span>
-        <h3 className="min-w-0 flex-1 text-slate-900 font-medium">
-          <a
-            href={patch.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-blue-600 transition-colors block truncate"
-            title={patch.title}
+      <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-[12px] leading-5">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span
+            className={`px-1.5 py-0.5 rounded text-[11px] leading-none font-medium flex-shrink-0 ${typeColor[patch.type] || typeColor.other}`}
           >
-            {patch.title}
-          </a>
-        </h3>
-        <span className="text-slate-500 shrink-0 truncate max-w-[140px]">{patch.author}</span>
-        {patch.date && <span className="text-slate-400 shrink-0">{formatDate(patch.date)}</span>}
+            {typeLabel[patch.type] || patch.type}
+          </span>
+          <h3 className="min-w-0 flex-1 text-slate-900 font-medium">
+            <a
+              href={patch.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-600 transition-colors block truncate"
+              title={patch.title}
+            >
+              {patch.title}
+            </a>
+          </h3>
+        </div>
+        <div className="flex items-center gap-2 text-slate-400 shrink-0 pl-6 sm:pl-0">
+          <span className="text-slate-500 truncate max-w-[80px] sm:max-w-[140px]">{patch.author}</span>
+          {patch.date && <span className="hidden sm:inline">{formatDate(patch.date)}</span>}
+        </div>
       </div>
     </div>
   )
