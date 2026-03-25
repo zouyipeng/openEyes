@@ -9,6 +9,8 @@
   "scripts": {
     "build": "tsc",
     "dev:cli": "tsx src/cli/index.ts",
+    "fetch": "tsx src/cli/index.ts fetch",
+    "summary": "tsx src/cli/index.ts summary",
     "generate-summaries": "tsx src/scripts/generate-summaries.ts"
   },
   "dependencies": {

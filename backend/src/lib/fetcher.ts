@@ -525,8 +525,6 @@ export async function fetchGitRepo(source: Source, force: boolean = false, debug
 
     const logResult = await git.log([
       '--since', sinceStr,
-      '--pretty=format:%H|%h|%s|%an|%ae|%aI',
-      '--numstat',
       '--no-merges',
       `-${maxCommits}`
     ])
@@ -543,15 +541,23 @@ export async function fetchGitRepo(source: Source, force: boolean = false, debug
 
       const hash = commit.hash
       const shortHash = commit.hash.substring(0, 7)
-      const title = commit.message || ''
+      const title = commit.message?.split('\n')[0] || ''
       const author = commit.author_name || ''
       const authorEmail = commit.author_email || ''
       const date = commit.date || ''
 
-      const diffResult = await git.diffSummary([`${hash}^`, hash])
-      const files = diffResult.files.map(f => f.file)
-      const additions = diffResult.insertions || 0
-      const deletions = diffResult.deletions || 0
+      let files: string[] = []
+      let additions = 0
+      let deletions = 0
+
+      try {
+        const diffResult = await git.diffSummary([`${hash}^`, hash])
+        files = diffResult.files.map(f => f.file)
+        additions = diffResult.insertions || 0
+        deletions = diffResult.deletions || 0
+      } catch (diffError) {
+        console.warn(`[Fetcher] Git - 无法获取提交 ${shortHash} 的差异统计`)
+      }
 
       const content = [
         `提交: ${shortHash}`,
@@ -560,10 +566,11 @@ export async function fetchGitRepo(source: Source, force: boolean = false, debug
         `标题: ${title}`,
         '',
         '修改的文件:',
-        ...files.map(f => `- ${f}`),
+        ...files.slice(0, 20).map(f => `- ${f}`),
+        files.length > 20 ? `... 还有 ${files.length - 20} 个文件` : '',
         '',
         `统计: +${additions} -${deletions}`
-      ].join('\n')
+      ].filter(Boolean).join('\n')
 
       const type = inferPatchTypeRuleBased(title, content)
       const subsystem = inferSubsystemFromFiles(files)
