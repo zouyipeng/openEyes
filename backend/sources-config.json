@@ -6,6 +6,10 @@
       "linux kernel": {
         "summaryPrompt": "你是一个Linux内核开发专家。请用简洁的中文总结这个补丁的主要改动点，并给出简短评价，字数在100字左右。\n\n格式要求：\n### 补丁分析\n（总结改动点）\n\n### 评价\n（给出技术评价）\n\n直接输出内容，不要输出思考过程。",
         "categorySummaryPrompt": "你是一个Linux内核开发专家。请根据今日收集的内核补丁，生成一份详细但聚合的日报总结（不是逐条补丁解读）。\n\n格式要求（严格遵守，只输出以下两个三级标题）：\n### 今日社区动态\n- 必须用 Markdown 列表输出（每个信息点一行，以 `- ` 开头）\n- 每个列表项必须以 1 个语义匹配的 emoji 开头，例如：子系统/架构用 🧩，修复与稳定性用 🛠️/🛡️，性能与优化用 ⚡，功能新增用 ✨，趋势与结论用 📌/📈\n- 先给出总体结论，再分点描述活跃子系统、修复类型分布、功能新增方向\n- 至少 6 个信息点，尽量具体（可提及代表性模块名）\n\n### 总体评价\n- 必须用 Markdown 列表输出（每个信息点一行，以 `- ` 开头）\n- 每个列表项必须以 1 个语义匹配的 emoji 开头（不要随机，不要重复堆砌）\n- 覆盖稳定性风险、回归风险、维护成本、后续关注点四个维度\n- 至少 4 个信息点，每点一句，避免空泛\n\n限制：\n1) 不要逐条罗列补丁标题\n2) 不要输出 `#`/`##` 大标题，只允许上面两个 `###` 小标题\n3) 用中文回复，尽量详细\n4) emoji 仅用于列表项开头，每条 1 个即可\n5) 不要输出思考过程。"
+      },
+      "git-commit": {
+        "summaryPrompt": "你是一个Linux内核开发专家。请用简洁的中文总结这个Git提交的主要改动点，字数在80字左右。\n\n格式要求：\n### 提交分析\n（总结改动点）\n\n直接输出内容，不要输出思考过程。",
+        "categorySummaryPrompt": "你是一个Linux内核开发专家。请根据最近7天内主线仓库的合并情况，生成一份详细的合并报告。\n\n格式要求（严格遵守）：\n### 本周合并动态\n- 必须用 Markdown 列表输出（每个信息点一行，以 `- ` 开头）\n- 每个列表项必须以 1 个语义匹配的 emoji 开头\n- 先给出总体合并数量和趋势，再分点描述活跃子系统、主要合并方向\n- 至少 6 个信息点\n\n### 合并评价\n- 必须用 Markdown 列表输出\n- 覆盖合并节奏、代码质量、潜在风险、后续关注点\n- 至少 4 个信息点\n\n限制：\n1) 不要逐条罗列提交标题\n2) 用中文回复\n3) 不要输出思考过程。"
       }
     }
   },
@@ -20,6 +24,20 @@
       "excludeAuthors": ["kernel test robot"],
       "lkmlDetailConcurrency": 12,
       "lkmlDetailTimeoutMs": 8000
+    },
+    {
+      "id": "linux-kernel-git",
+      "name": "Linux Kernel Git Mainline",
+      "type": "git",
+      "url": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git",
+      "category": "git-commit",
+      "active": true,
+      "gitConfig": {
+        "branch": "master",
+        "sinceDays": 7,
+        "maxCommits": 200,
+        "localPath": "D:\\zouyipeng\\linux_mainline\\linux"
+      }
     }
   ]
 }

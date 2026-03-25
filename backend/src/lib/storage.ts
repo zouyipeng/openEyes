@@ -5,6 +5,14 @@ const DATA_DIR = path.join(__dirname, '..', '..', '..', 'public')
 const SOURCES_CONFIG_PATH = path.join(__dirname, '..', '..', 'sources-config.json')
 const PROCESSED_FILE = path.join(DATA_DIR, 'processed-articles.json')
 
+export interface GitConfig {
+  branch: string
+  sinceDays: number
+  maxCommits: number
+  shallow?: boolean
+  localPath?: string
+}
+
 export interface Source {
   id: string
   name: string
@@ -17,6 +25,7 @@ export interface Source {
   excludeAuthors?: string[]
   lkmlDetailConcurrency?: number
   lkmlDetailTimeoutMs?: number
+  gitConfig?: GitConfig
 }
 
 export interface CategoryPrompt {
@@ -49,6 +58,7 @@ export interface Article {
   fetchedAt: string
   highlight?: boolean
   patchData?: LKMLPatch
+  gitCommitData?: GitCommit
 }
 
 export interface DayData {
@@ -105,6 +115,22 @@ export interface LKMLPatch {
   summary: string
   messages: LKMLMessage[]
   replyCount: number
+}
+
+export interface GitCommit {
+  hash: string
+  shortHash: string
+  title: string
+  author: string
+  authorEmail: string
+  date: string
+  content: string
+  files: string[]
+  additions: number
+  deletions: number
+  subsystem: KernelSubsystem
+  type: PatchType
+  url: string
 }
 
 function ensureDirectoryExists(dirPath: string): void {

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import simpleGit from 'simple-git'
 import { 
   loadSources, 
   loadProcessedUrls,
@@ -14,7 +15,8 @@ import {
   type DayData,
   type LKMLMessage,
   type LKMLPatch,
-  type GlobalConfig
+  type GlobalConfig,
+  type GitCommit
 } from './storage'
 import { 
   generateCategorySummary, 
@@ -468,6 +470,150 @@ export async function fetchLKML(source: Source, processedUrls: Set<string>, forc
   }
 }
 
+function inferSubsystemFromFiles(files: string[]): string {
+  const subsystemPatterns: Record<string, RegExp> = {
+    'sched': /\/sched\/|\/kernel\/sched/,
+    'mm': /\/mm\/|\/include\/linux\/mm\.h|\/include\/linux\/slab/,
+    'fs': /\/fs\/|\/include\/linux\/fs\.h/,
+    'net': /\/net\/|\/include\/linux\/net|\/include\/net\//,
+    'driver': /\/drivers\//,
+    'security': /\/security\/|\/include\/linux\/security/,
+    'arch': /\/arch\//,
+  }
+
+  for (const [subsystem, pattern] of Object.entries(subsystemPatterns)) {
+    if (files.some(f => pattern.test(f))) {
+      return subsystem
+    }
+  }
+  return 'other'
+}
+
+export async function fetchGitRepo(source: Source, force: boolean = false, debug: boolean = false): Promise<Article[]> {
+  const gitConfig = source.gitConfig
+  if (!gitConfig) {
+    console.error(`[Fetcher] Git - 缺少 gitConfig 配置: ${source.name}`)
+    return []
+  }
+
+  const localPath = gitConfig.localPath
+  if (!localPath) {
+    console.error(`[Fetcher] Git - 缺少 localPath 配置: ${source.name}`)
+    return []
+  }
+
+  try {
+    console.log(`[Fetcher] Git - 正在读取仓库: ${localPath}`)
+    
+    const git = simpleGit(localPath)
+    
+    const isRepo = await git.checkIsRepo()
+    if (!isRepo) {
+      console.error(`[Fetcher] Git - 不是有效的 Git 仓库: ${localPath}`)
+      return []
+    }
+
+    const branch = gitConfig.branch || 'master'
+    const sinceDays = gitConfig.sinceDays || 7
+    const maxCommits = debug ? 20 : (gitConfig.maxCommits || 200)
+
+    const sinceDate = new Date()
+    sinceDate.setDate(sinceDate.getDate() - sinceDays)
+    const sinceStr = sinceDate.toISOString().split('T')[0]
+
+    console.log(`[Fetcher] Git - 分支: ${branch}, 时间范围: ${sinceStr} 至今, 最大提交数: ${maxCommits}`)
+
+    const logResult = await git.log([
+      '--since', sinceStr,
+      '--pretty=format:%H|%h|%s|%an|%ae|%aI',
+      '--numstat',
+      '--no-merges',
+      `-${maxCommits}`
+    ])
+
+    const commits = logResult.all
+    console.log(`[Fetcher] Git - 获取到 ${commits.length} 个提交`)
+
+    const articles: Article[] = []
+    const seenHashes = new Set<string>()
+
+    for (const commit of commits) {
+      if (seenHashes.has(commit.hash)) continue
+      seenHashes.add(commit.hash)
+
+      const hash = commit.hash
+      const shortHash = commit.hash.substring(0, 7)
+      const title = commit.message || ''
+      const author = commit.author_name || ''
+      const authorEmail = commit.author_email || ''
+      const date = commit.date || ''
+
+      const diffResult = await git.diffSummary([`${hash}^`, hash])
+      const files = diffResult.files.map(f => f.file)
+      const additions = diffResult.insertions || 0
+      const deletions = diffResult.deletions || 0
+
+      const content = [
+        `提交: ${shortHash}`,
+        `作者: ${author} <${authorEmail}>`,
+        `日期: ${date}`,
+        `标题: ${title}`,
+        '',
+        '修改的文件:',
+        ...files.map(f => `- ${f}`),
+        '',
+        `统计: +${additions} -${deletions}`
+      ].join('\n')
+
+      const type = inferPatchTypeRuleBased(title, content)
+      const subsystem = inferSubsystemFromFiles(files)
+
+      const gitCommitData: GitCommit = {
+        hash,
+        shortHash,
+        title,
+        author,
+        authorEmail,
+        date,
+        content,
+        files,
+        additions,
+        deletions,
+        subsystem: subsystem as any,
+        type: type as any,
+        url: `${source.url}/commit/${hash}`
+      }
+
+      const article: Article = {
+        id: generateArticleId(),
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceUrl: source.url,
+        title: title,
+        content,
+        summary: '',
+        url: gitCommitData.url,
+        author,
+        fetchedAt: new Date().toISOString(),
+        highlight: false,
+        gitCommitData
+      }
+
+      articles.push(article)
+    }
+
+    const sortedArticles = articles.sort(
+      (a, b) => new Date(b.gitCommitData?.date || 0).getTime() - new Date(a.gitCommitData?.date || 0).getTime()
+    )
+
+    console.log(`[Fetcher] Git - 最终获取 ${sortedArticles.length} 篇文章`)
+    return sortedArticles
+  } catch (error) {
+    console.error(`Git抓取失败 [${source.name}]:`, error)
+    return []
+  }
+}
+
 export async function fetchAllSources(processedUrls: Set<string>, force: boolean = false, debug: boolean = false): Promise<Article[]> {
   let sources = loadSources().filter(s => s.active)
   
@@ -487,6 +633,8 @@ export async function fetchAllSources(processedUrls: Set<string>, force: boolean
 
       if (source.type === 'lkml') {
         articles = await fetchLKML(source, processedUrls, force, debug)
+      } else if (source.type === 'git') {
+        articles = await fetchGitRepo(source, force, debug)
       } else {
         console.log(`[Fetcher] 跳过不支持的信息源类型: ${source.type}`)
         continue

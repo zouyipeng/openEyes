@@ -26,6 +26,15 @@ function sortLinuxKernelArticles(articles: any[]) {
   })
 }
 
+function sortGitCommits(articles: any[]) {
+  return [...articles].sort((a, b) => {
+    const ta = TYPE_ORDER[a.gitCommitData?.type ?? 'other'] ?? 3
+    const tb = TYPE_ORDER[b.gitCommitData?.type ?? 'other'] ?? 3
+    if (ta !== tb) return ta - tb
+    return new Date(b.gitCommitData?.date || 0).getTime() - new Date(a.gitCommitData?.date || 0).getTime()
+  })
+}
+
 function LkmlTypeStatsBar({ articles }: { articles: any[] }) {
   const stats = useMemo(() => {
     let feature = 0
@@ -83,6 +92,77 @@ function LkmlTypeStatsBar({ articles }: { articles: any[] }) {
         <span className="text-rose-600">Bugfix {stats.bugfix}</span>
         <span className="text-slate-300 mx-1 sm:mx-2">·</span>
         <span className="text-slate-500">Other {stats.other}</span>
+        {stats.dateRange && (
+          <>
+            <span className="text-slate-300 mx-1 sm:mx-2 hidden sm:inline">·</span>
+            <span className="text-slate-500 hidden sm:inline">{stats.dateRange}</span>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GitCommitStatsBar({ articles }: { articles: any[] }) {
+  const stats = useMemo(() => {
+    let feature = 0
+    let bugfix = 0
+    let other = 0
+    let totalAdditions = 0
+    let totalDeletions = 0
+    let minTs = Number.POSITIVE_INFINITY
+    let maxTs = Number.NEGATIVE_INFINITY
+
+    for (const a of articles) {
+      const commit = a.gitCommitData
+      if (!commit) continue
+      
+      const t = commit.type
+      if (t === 'feature') feature++
+      else if (t === 'bugfix') bugfix++
+      else other++
+
+      totalAdditions += commit.additions || 0
+      totalDeletions += commit.deletions || 0
+
+      const ts = new Date(commit.date).getTime()
+      if (!Number.isNaN(ts)) {
+        if (ts < minTs) minTs = ts
+        if (ts > maxTs) maxTs = ts
+      }
+    }
+
+    const formatDate = (ts: number) =>
+      new Date(ts).toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+        .replace(/\//g, '-')
+        .replace(/\s/g, '')
+    const dateRange =
+      Number.isFinite(minTs) && Number.isFinite(maxTs)
+        ? `${formatDate(minTs)} ~ ${formatDate(maxTs)}`
+        : ''
+
+    return { total: articles.length, feature, bugfix, other, totalAdditions, totalDeletions, dateRange }
+  }, [articles])
+
+  if (stats.total === 0) return null
+
+  return (
+    <div className="mb-3 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-slate-700 shadow-sm">
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-1 sm:gap-x-0">
+        <span className="text-purple-600 mr-1 sm:mr-2">最近7天提交</span>
+        <span className="text-slate-900 font-medium">{stats.total}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-emerald-600">Feature {stats.feature}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-rose-600">Bugfix {stats.bugfix}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-emerald-600">+{stats.totalAdditions.toLocaleString()}</span>
+        <span className="text-slate-300 mx-1 sm:mx-2">·</span>
+        <span className="text-rose-600">-{stats.totalDeletions.toLocaleString()}</span>
         {stats.dateRange && (
           <>
             <span className="text-slate-300 mx-1 sm:mx-2 hidden sm:inline">·</span>
@@ -180,6 +260,92 @@ function LkmlGroupedList({
   )
 }
 
+function GitCommitGroupedList({
+  articles,
+  expanded,
+  onToggle,
+  activeAnchorId,
+}: {
+  articles: any[]
+  expanded: Record<string, boolean>
+  onToggle: (type: string) => void
+  activeAnchorId: string | null
+}) {
+  const grouped = useMemo(() => {
+    const groups: Record<string, any[]> = { feature: [], bugfix: [], other: [] }
+    for (const a of articles) {
+      const t = a.gitCommitData?.type
+      if (t === 'feature' || t === 'bugfix') groups[t].push(a)
+      else groups.other.push(a)
+    }
+    return groups
+  }, [articles])
+
+  return (
+    <div className="space-y-3">
+      {(Object.keys(TYPE_ORDER) as Array<'feature' | 'bugfix' | 'other'>).map(type => {
+        const list = grouped[type]
+        if (!list || list.length === 0) return null
+        const isExpanded = !!expanded[type]
+        const visible = list.slice(0, LKML_COLLAPSE_DEFAULT)
+        const hiddenCount = Math.max(0, list.length - LKML_COLLAPSE_DEFAULT)
+
+        return (
+          <div key={type} className="rounded-xl border border-purple-200 bg-white p-2.5 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-xs text-slate-700 tracking-wide">
+                <span className="font-medium">{TYPE_LABEL[type]}</span>
+                <span className="text-slate-400 ml-1">({list.length})</span>
+              </div>
+              {list.length > LKML_COLLAPSE_DEFAULT && isExpanded && (
+                <button
+                  onClick={() => onToggle(type)}
+                  className="rounded-md px-2 py-0.5 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                >
+                  收起
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {visible.map(article => (
+                <div key={article.id} className="lkml-fade-in">
+                  <LKMLPatchCard
+                    article={article}
+                    isJumpHighlighted={activeAnchorId === lkmlAnchorId(article.id)}
+                  />
+                </div>
+              ))}
+              {list.length > LKML_COLLAPSE_DEFAULT && (
+                <div className={`lkml-collapse-content ${isExpanded ? 'is-open' : ''}`}>
+                  <div className="space-y-1.5">
+                    {list.slice(LKML_COLLAPSE_DEFAULT).map(article => (
+                      <div key={article.id} className="lkml-fade-in">
+                        <LKMLPatchCard
+                          article={article}
+                          isJumpHighlighted={activeAnchorId === lkmlAnchorId(article.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {list.length > LKML_COLLAPSE_DEFAULT && !isExpanded && (
+                <button
+                  onClick={() => onToggle(type)}
+                  className="w-full rounded-lg border border-dashed border-purple-300 py-1 text-center text-xs tracking-wide text-slate-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
+                  title={`展开其余 ${hiddenCount} 条`}
+                >
+                  ...
+                </button>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 interface NewsDashboardProps {
   initialDate?: string
 }
@@ -233,7 +399,12 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
 
   const articles = useMemo(() => {
     if (!dayData?.articles) return []
-    return sortLinuxKernelArticles(dayData.articles)
+    return sortLinuxKernelArticles(dayData.articles.filter((a: any) => a.patchData))
+  }, [dayData])
+
+  const gitCommits = useMemo(() => {
+    if (!dayData?.articles) return []
+    return sortGitCommits(dayData.articles.filter((a: any) => a.gitCommitData))
   }, [dayData])
 
   const summary = dayData?.summary || ''
@@ -390,7 +561,11 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
               <span>Linux Kernel动态</span>
             </h1>
           </div>
-          <span className="text-sm text-slate-500 sm:text-right">共 {articles.length} 篇</span>
+          <span className="text-sm text-slate-500 sm:text-right">
+            {articles.length > 0 && <span>LKML {articles.length} 篇</span>}
+            {articles.length > 0 && gitCommits.length > 0 && <span className="mx-1">·</span>}
+            {gitCommits.length > 0 && <span>Git {gitCommits.length} 提交</span>}
+          </span>
         </div>
 
         {summary && (
@@ -404,7 +579,7 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
           </div>
         )}
 
-        {articles.length === 0 ? (
+        {articles.length === 0 && gitCommits.length === 0 ? (
           <div className="text-center py-12 sm:py-16">
             <div className="text-4xl sm:text-5xl mb-4">📭</div>
             <h3 className="text-base font-medium text-slate-700 mb-2">暂无内容</h3>
@@ -412,15 +587,38 @@ export default function NewsDashboard({ initialDate }: NewsDashboardProps) {
           </div>
         ) : (
           <>
-            <LkmlTypeStatsBar articles={articles} />
-            <LkmlGroupedList
-              articles={articles}
-              expanded={expandedTypeMap}
-              activeAnchorId={activeAnchorId}
-              onToggle={(type) =>
-                setExpandedTypeMap(prev => ({ ...prev, [type]: !prev[type] }))
-              }
-            />
+            {articles.length > 0 && (
+              <>
+                <LkmlTypeStatsBar articles={articles} />
+                <LkmlGroupedList
+                  articles={articles}
+                  expanded={expandedTypeMap}
+                  activeAnchorId={activeAnchorId}
+                  onToggle={(type) =>
+                    setExpandedTypeMap(prev => ({ ...prev, [type]: !prev[type] }))
+                  }
+                />
+              </>
+            )}
+            {gitCommits.length > 0 && (
+              <>
+                <div className="mt-6 mb-2">
+                  <h2 className="text-base font-semibold text-purple-700 flex items-center gap-2">
+                    <span>📦</span>
+                    <span>Git 主线合并</span>
+                  </h2>
+                </div>
+                <GitCommitStatsBar articles={gitCommits} />
+                <GitCommitGroupedList
+                  articles={gitCommits}
+                  expanded={expandedTypeMap}
+                  activeAnchorId={activeAnchorId}
+                  onToggle={(type) =>
+                    setExpandedTypeMap(prev => ({ ...prev, [type]: !prev[type] }))
+                  }
+                />
+              </>
+            )}
           </>
         )}
       </div>

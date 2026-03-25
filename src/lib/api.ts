@@ -12,6 +12,7 @@ export interface Article {
   fetchedAt: string
   highlight?: boolean
   patchData?: LKMLPatch
+  gitCommitData?: GitCommit
 }
 
 export interface Source {
@@ -57,6 +58,22 @@ export interface LKMLPatch {
   discussionSummary?: string
   messages: LKMLMessage[]
   replyCount: number
+}
+
+export interface GitCommit {
+  hash: string
+  shortHash: string
+  title: string
+  author: string
+  authorEmail: string
+  date: string
+  content: string
+  files: string[]
+  additions: number
+  deletions: number
+  subsystem: string
+  type: string
+  url: string
 }
 
 export const dayDataApi = {
