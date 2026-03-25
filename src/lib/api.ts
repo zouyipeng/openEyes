@@ -76,7 +76,7 @@ export const dayDataApi = {
 
   getDataByDate: async (dateStr: string): Promise<DayData | null> => {
     try {
-      const response = await fetch(`/linux kernel-${dateStr}.json`)
+      const response = await fetch(`/${dateStr}.json`)
       if (response.ok) {
         return await response.json()
       }
