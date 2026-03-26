@@ -4,6 +4,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Linux Kernel动态 - openEyes',
   description: '每日追踪 Linux Kernel 社区补丁动态与 AI 聚合总结',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
