@@ -221,10 +221,9 @@ export async function generateSummary(
   const parts: string[] = []
   const dateRange = computeArticleDateRange(articles)
   const model = config.openai.model?.trim() || 'unknown'
+  const dateRangeShort = dateRange ? dateRange.replace(/\s*~\s*/g, '~').replace(/-/g, '') : '未知'
   
-  parts.push(`# 今日社区动态`)
-  parts.push('')
-  parts.push(`> 模型: ${model} | 日期范围: ${dateRange || '未知'}`)
+  parts.push(`# 今日社区动态（${model} | ${dateRangeShort}）`)
   parts.push('')
   
   if (featureArticles.length > 0) {

@@ -183,9 +183,8 @@ async function generateSummary(articles, customPrompt) {
     const parts = [];
     const dateRange = computeArticleDateRange(articles);
     const model = config.openai.model?.trim() || 'unknown';
-    parts.push(`# 今日社区动态`);
-    parts.push('');
-    parts.push(`> 模型: ${model} | 日期范围: ${dateRange || '未知'}`);
+    const dateRangeShort = dateRange ? dateRange.replace(/\s*~\s*/g, '~').replace(/-/g, '') : '未知';
+    parts.push(`# 今日社区动态（${model} | ${dateRangeShort}）`);
     parts.push('');
     if (featureArticles.length > 0) {
         console.log(`[AI] 正在生成 Feature 摘要...`);
