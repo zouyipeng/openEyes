@@ -181,7 +181,11 @@ async function generateSummary(articles, customPrompt) {
         !(a.patchData?.type || a.gitCommitData?.type));
     console.log(`[AI] Feature: ${featureArticles.length} 条, Bugfix: ${bugfixArticles.length} 条, Other: ${otherArticles.length} 条`);
     const parts = [];
+    const dateRange = computeArticleDateRange(articles);
+    const model = config.openai.model?.trim() || 'unknown';
     parts.push(`# 今日社区动态`);
+    parts.push('');
+    parts.push(`> 模型: ${model} | 日期范围: ${dateRange || '未知'}`);
     parts.push('');
     if (featureArticles.length > 0) {
         console.log(`[AI] 正在生成 Feature 摘要...`);
