@@ -61,8 +61,12 @@ const runSummary = async (options: Record<string, string>) => {
   }
   
   const config = loadSourcesConfig()
-  const source = config.sources.find(s => s.name === sourceName)
-  const summary = await generateSummary(data.articles, source?.summaryPrompt)
+  const summary = await generateSummary(data.articles, {
+    subsystemPrompt: config.subsystemPrompt,
+    overallPrompt: config.overallPrompt,
+    subsystemSummaryConcurrency: config.subsystemSummaryConcurrency,
+    fixedSubsystemRules: config.fixedSubsystemRules,
+  })
   
   data.summary = summary
   data.generatedAt = new Date().toISOString()

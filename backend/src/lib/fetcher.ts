@@ -17,6 +17,7 @@ import {
   generateSummary, 
   inferPatchTypeRuleBased,
 } from './ai'
+import { inferKernelSubsystem } from './subsystem'
 
 function buildLkmlDayPageUrl(baseUrl: string, day: Date): string {
   return new URL(
@@ -120,13 +121,30 @@ function parseLkmlPatchText(rawText: string): { commitMessage: string; changedFi
 
   const changedFiles = new Set<string>()
   for (const line of lines) {
-    const diffStatMatch = line.match(/^(.+?)\s+\|\s+\d+\s*[+\-]*\s*$/)
-    if (diffStatMatch) {
-      const filePath = diffStatMatch[1].trim()
-      if (filePath && !filePath.includes('file changed')) changedFiles.add(filePath)
+    // diffstat 行经常被 LKML 页面挤到同一行里；因此不要整行截断，而是在行内抽取像路径的 token
+    // 形如: "mm/vmscan.c            | 456 +++++" 或 "drivers/net/ppp/pppoe.c | 166 ++++"
+    const diffStatRe = /(^|\s)(\S+?)\s+\|\s+\d+\b/g
+    let m: RegExpExecArray | null
+    while ((m = diffStatRe.exec(line)) !== null) {
+      const candidate = m[2].trim()
+      if (!candidate) continue
+      // 过滤掉明显不是路径的内容
+      if (candidate.length > 200) continue
+      if (!/[\/.]/.test(candidate)) continue
+      if (candidate.includes('://')) continue
+      if (/^(hi|this|patch|from|signed-off-by)$/i.test(candidate)) continue
+      changedFiles.add(candidate)
     }
-    const diffGitMatch = line.match(/^diff --git a\/(.+?) b\/(.+)$/)
+
+    // "diff --git a/foo b/foo" 后面可能紧跟 "index ..."（同一行），且不一定在行首
+    const diffGitMatch = line.match(/\bdiff --git a\/(\S+)\s+b\/(\S+)/)
     if (diffGitMatch) changedFiles.add(diffGitMatch[2].trim())
+
+    // 兜底：从 --- a/ 与 +++ b/ 提取（有些补丁没有 diff --git）
+    const minusFile = line.match(/---\s+a\/(\S+)/)
+    if (minusFile) changedFiles.add(minusFile[1].trim())
+    const plusFile = line.match(/\+\+\+\s+b\/(\S+)/)
+    if (plusFile) changedFiles.add(plusFile[1].trim())
   }
 
   return { commitMessage, changedFiles: Array.from(changedFiles) }
@@ -148,7 +166,22 @@ async function fetchLkmlPatchDetails(
     try {
       const response = await axios.get(patchUrl, { headers, timeout: timeoutMs })
       const $ = cheerio.load(response.data)
-      const rawPatchText = $('pre').first().text().trim()
+      const preTexts = $('pre')
+        .toArray()
+        .map(el => $(el).text())
+        .map(t => (t || '').trim())
+        .filter(Boolean)
+
+      const scorePre = (t: string) => {
+        let s = 0
+        if (/\bdiff --git\b/i.test(t)) s += 50
+        if (/^---\s+a\//m.test(t) && /^\+\+\+\s+b\//m.test(t)) s += 30
+        if (/^Signed-off-by:/mi.test(t)) s += 10
+        if (t.length > 4000) s += 5
+        return s
+      }
+
+      const rawPatchText = (preTexts.sort((a, b) => scorePre(b) - scorePre(a))[0] || '').trim()
       const parsed = parseLkmlPatchText(rawPatchText)
       const dateRow = $('tr').filter((_, tr) => {
         const firstCell = $(tr).find('th, td').first().text().replace(/\s+/g, ' ').trim()
@@ -238,7 +271,8 @@ async function fetchLKML(source: Source): Promise<Article[]> {
             : '- 未解析到修改文件',
         ].join('\n')
 
-        const type = inferPatchTypeRuleBased(msg.title, content)
+        // 分类应同时基于标题与 commit message（不要被文件列表等噪声干扰）
+        const type = inferPatchTypeRuleBased(msg.title, patchDetails.commitMessage || '')
 
         const patchData: LKMLPatch = {
           id: `patch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -247,10 +281,11 @@ async function fetchLKML(source: Source): Promise<Article[]> {
           author: msg.author,
           date: patchDetails.sentAt || msg.date,
           content,
-          subsystem: 'other',
+          subsystem: inferKernelSubsystem({ title: msg.title, files: patchDetails.changedFiles }),
           type,
           highlight: false,
           summary: '',
+          changedFiles: patchDetails.changedFiles,
           messages: [msg],
           replyCount: 0,
         }
@@ -276,22 +311,6 @@ async function fetchLKML(source: Source): Promise<Article[]> {
     console.error(`LKML抓取失败 [${source.name}]:`, error)
     return []
   }
-}
-
-function inferSubsystemFromFiles(files: string[]): string {
-  const patterns: Record<string, RegExp> = {
-    'sched': /\/sched\/|\/kernel\/sched/,
-    'mm': /\/mm\/|\/include\/linux\/mm\.h/,
-    'fs': /\/fs\/|\/include\/linux\/fs\.h/,
-    'net': /\/net\/|\/include\/linux\/net/,
-    'driver': /\/drivers\//,
-    'security': /\/security\/|\/include\/linux\/security/,
-    'arch': /\/arch\//,
-  }
-  for (const [subsystem, pattern] of Object.entries(patterns)) {
-    if (files.some(f => pattern.test(f))) return subsystem
-  }
-  return 'other'
 }
 
 async function fetchGitRepo(source: Source): Promise<Article[]> {
@@ -355,7 +374,7 @@ async function fetchGitRepo(source: Source): Promise<Article[]> {
       ].filter(Boolean).join('\n')
 
       const type = inferPatchTypeRuleBased(title, content)
-      const subsystem = inferSubsystemFromFiles(files)
+      const subsystem = inferKernelSubsystem({ title, files })
 
       const gitCommitData: GitCommit = {
         hash,
@@ -423,7 +442,12 @@ export async function fetchAll(): Promise<void> {
       console.log(`[Fetcher] ${source.name} 完成，获取 ${articles.length} 条记录`)
 
       console.log(`[AI] 正在生成 ${source.name} 摘要...`)
-      const summary = await generateSummary(articles, source.summaryPrompt)
+      const summary = await generateSummary(articles, {
+        subsystemPrompt: config.subsystemPrompt,
+        overallPrompt: config.overallPrompt,
+        subsystemSummaryConcurrency: config.subsystemSummaryConcurrency,
+        fixedSubsystemRules: config.fixedSubsystemRules,
+      })
 
       const sourceDayData: SourceDayData = {
         date: todayStr,

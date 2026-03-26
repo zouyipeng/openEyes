@@ -20,10 +20,18 @@ export interface Source {
   lkmlDetailConcurrency?: number
   lkmlDetailTimeoutMs?: number
   gitConfig?: GitConfig
-  summaryPrompt?: string
 }
 
 export interface SourcesConfig {
+  // 全局固定子系统目录归类规则（用于把补丁归类到预定义子系统集合）
+  // key 为子系统名（如: 内存/调度/网络/安全/维测/文件系统/arm64/x86），patterns 为目录前缀或简单 glob
+  fixedSubsystemRules?: Record<string, string[]>
+  // 全局 prompt（每个子系统独立上下文）
+  subsystemPrompt?: string
+  // 全局 prompt（聚合各子系统后整体点评，独立上下文）
+  overallPrompt?: string
+  // 全局并发上限（避免一次性几十个子系统触发限流）
+  subsystemSummaryConcurrency?: number
   sources: Source[]
 }
 
@@ -57,7 +65,8 @@ export interface SourceDatesIndex {
 
 export type PatchType = 'feature' | 'bugfix' | 'other'
 
-export type KernelSubsystem = 'sched' | 'mm' | 'fs' | 'net' | 'driver' | 'security' | 'arch' | 'other'
+// 子系统名允许动态抽取（如 drm/msm、netfilter、arch/riscv 等）
+export type KernelSubsystem = string
 
 export interface LKMLMessage {
   id: string
@@ -80,6 +89,7 @@ export interface LKMLPatch {
   type: PatchType
   highlight: boolean
   summary: string
+  changedFiles?: string[]
   messages: LKMLMessage[]
   replyCount: number
 }

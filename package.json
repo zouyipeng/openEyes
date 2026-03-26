@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "all": "cmd /c \"npm --prefix backend run fetch -- all && npm run build && npm run serve\"",
     "serve": "serve out",
     "lint": "next lint"
   },

@@ -111,6 +111,39 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
   const deletions = articles.reduce((sum, a) => sum + (a.gitCommitData?.deletions || 0), 0)
   const displayName = sourceData?.sourceName || sourceName
   const summary = sourceData?.summary || ''
+  const summaryBlocks = useMemo(() => {
+    if (!summary.trim()) return []
+    const lines = summary.split('\n')
+    const blocks: { title: string; markdown: string; isOverview?: boolean }[] = []
+    let currentTitle = '总体'
+    let currentLines: string[] = []
+    let seenFirstH2 = false
+
+    const pushCurrent = () => {
+      const md = currentLines.join('\n').trim()
+      if (!md) return
+      blocks.push({ title: currentTitle, markdown: md, isOverview: !seenFirstH2 && currentTitle === '总体' })
+    }
+
+    for (const line of lines) {
+      const h2 = line.match(/^##\s+(.+)\s*$/)
+      if (h2) {
+        pushCurrent()
+        currentTitle = h2[1].trim()
+        currentLines = [line]
+        seenFirstH2 = true
+      } else {
+        currentLines.push(line)
+      }
+    }
+    pushCurrent()
+    return blocks
+  }, [summary])
+
+  const subsystemCardId = (title: string) => `subsystem-${encodeURIComponent(title)}`
+  const subsystemTitles = useMemo(() => {
+    return new Set(summaryBlocks.map(b => b.title).filter(t => t && t !== '总体'))
+  }, [summaryBlocks])
 
   const formatDateDisplay = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-')
@@ -145,11 +178,43 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
     h2: ({ children }: { children?: ReactNode }) => (
       <h2 className="text-sm font-semibold text-sky-600 mt-4 mb-2 first:mt-0 border-l-4 border-sky-400 pl-2.5">{children}</h2>
     ),
-    h3: ({ children }: { children?: ReactNode }) => (
-      <h3 className="text-sm font-bold text-sky-700 mt-3 mb-1.5 first:mt-0 border-l-2 border-sky-500/70 pl-2.5 [&_strong]:text-sky-800 [&_strong]:font-bold">
-        {children}
-      </h3>
-    ),
+    h3: ({ children }: { children?: ReactNode }) => {
+      const text =
+        typeof children === 'string'
+          ? children.trim()
+          : Array.isArray(children)
+            ? children.map(c => (typeof c === 'string' ? c : '')).join('').trim()
+            : ''
+
+      const isSubsystemHeading = !!text && subsystemTitles.has(text)
+
+      if (!isSubsystemHeading) {
+        return (
+          <h3 className="text-sm font-bold text-sky-700 mt-3 mb-1.5 first:mt-0 border-l-2 border-sky-500/70 pl-2.5 [&_strong]:text-sky-800 [&_strong]:font-bold">
+            {children}
+          </h3>
+        )
+      }
+
+      return (
+        <h3 className="text-sm font-bold text-sky-700 mt-3 mb-1.5 first:mt-0 border-l-2 border-sky-500/70 pl-2.5">
+          <a
+            href={`#${subsystemCardId(text)}`}
+            className="inline-flex items-center gap-1.5 hover:text-sky-800 transition-colors"
+            onClick={e => {
+              e.preventDefault()
+              const el = document.getElementById(subsystemCardId(text))
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            title={`跳转到 ${text} 详情`}
+            aria-label={`跳转到 ${text} 详情`}
+          >
+            <span>{text}</span>
+            <span className="text-sky-500 text-xs leading-none">↧</span>
+          </a>
+        </h3>
+      )
+    },
     p: ({ children }: { children?: ReactNode }) => (
       <p className="text-sm text-slate-600 my-1 leading-relaxed">{children}</p>
     ),
@@ -159,9 +224,44 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
     ol: ({ children }: { children?: ReactNode }) => (
       <ol className="text-sm text-slate-600 my-1 pl-4 list-decimal space-y-0.5">{children}</ol>
     ),
-    li: ({ children }: { children?: ReactNode }) => (
-      <li className="text-sm text-slate-600 my-0.5">{children}</li>
-    ),
+    li: ({ children }: { children?: ReactNode }) => {
+      const hasPerfTag = (node: ReactNode): boolean => {
+        if (!node) return false
+        if (typeof node === 'string') return node.includes('perf')
+        if (typeof node === 'number') return false
+        if (Array.isArray(node)) return node.some(hasPerfTag)
+        // React element
+        const anyNode = node as any
+        const type = anyNode?.type
+        const props = anyNode?.props
+        if (!props) return false
+        // `code` nodes render tags like `perf`
+        if (type === 'code') {
+          const codeText =
+            typeof props.children === 'string'
+              ? props.children
+              : Array.isArray(props.children)
+                ? props.children.map((c: any) => (typeof c === 'string' ? c : '')).join('')
+                : ''
+          return codeText.trim() === 'perf'
+        }
+        return hasPerfTag(props.children)
+      }
+
+      const isPerf = hasPerfTag(children)
+
+      return (
+        <li
+          className={
+            isPerf
+              ? 'text-sm text-slate-700 my-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.15)]'
+              : 'text-sm text-slate-700 my-1 rounded-lg px-2.5 py-1.5'
+          }
+        >
+          {children}
+        </li>
+      )
+    },
     strong: ({ children }: { children?: ReactNode }) => (
       <strong className="text-slate-800 font-semibold">{children}</strong>
     ),
@@ -169,7 +269,7 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
       <blockquote className="border-l-2 border-slate-300 pl-3 text-sm text-slate-600 my-2">{children}</blockquote>
     ),
     code: ({ children }: { children?: ReactNode }) => (
-      <code className="bg-slate-100 px-1 py-0.5 rounded text-xs text-slate-700">{children}</code>
+      <code className="bg-sky-100 px-1 py-0.5 rounded text-xs text-sky-800 border border-sky-200">{children}</code>
     ),
     pre: ({ children }: { children?: ReactNode }) => (
       <pre className="bg-slate-100 p-2.5 rounded overflow-x-auto text-xs my-2 text-slate-700">{children}</pre>
@@ -207,21 +307,41 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
               }
             }}
           >
-            {isLkmlPatchAnchor ? '🔗' : children}
+            {isLkmlPatchAnchor ? '↧' : children}
           </a>
         )
       }
       const external = href?.startsWith('http')
+      const childText =
+        typeof children === 'string'
+          ? children.trim()
+          : Array.isArray(children)
+            ? children.map(c => (typeof c === 'string' ? c : '')).join('').trim()
+            : ''
+      const isIconOnly = childText === '🔗' || childText === '↗'
       return (
         <a
           href={href}
-          className="text-sky-600 hover:text-sky-700 underline underline-offset-2 text-sm"
+          className={
+            isIconOnly
+              ? 'inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-sky-600 hover:text-sky-700 hover:bg-sky-50 transition-colors text-sm no-underline'
+              : 'text-sky-600 hover:text-sky-700 underline underline-offset-2 text-sm'
+          }
           {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         >
-          {children}
+          {isIconOnly ? '↗' : children}
         </a>
       )
     },
+  }
+
+  const overviewSummaryComponents = {
+    ...categorySummaryComponents,
+    // Overall/overview comments should stay compact and neutral;
+    // perf highlighting is reserved for per-subsystem detail blocks.
+    li: ({ children }: { children?: ReactNode }) => (
+      <li className="text-sm text-slate-700 my-1 rounded-lg px-2.5 py-1.5">{children}</li>
+    ),
   }
 
   if (loading) {
@@ -261,7 +381,24 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
           </div>
         </div>
 
-        {summary && (
+        {summaryBlocks.length > 0 && (
+          <div className="mb-5 sm:mb-8 space-y-3">
+            {summaryBlocks.map((block, idx) => (
+              <div
+                key={`${block.title}-${idx}`}
+                id={block.title !== '总体' ? subsystemCardId(block.title) : undefined}
+                className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm"
+              >
+                <div className="prose prose-base max-w-none">
+                  <ReactMarkdown components={block.isOverview ? overviewSummaryComponents : categorySummaryComponents}>
+                    {block.markdown}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {summaryBlocks.length === 0 && summary && (
           <div className="bg-white rounded-xl p-4 sm:p-5 mb-5 sm:mb-8 border border-slate-200 shadow-sm">
             <div className="prose prose-base max-w-none">
               <ReactMarkdown components={categorySummaryComponents}>{summary}</ReactMarkdown>

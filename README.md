@@ -114,6 +114,9 @@ npm run build
 
 # 启动静态服务器
 npx serve out
+
+# 一键部署
+npm run all
 ```
 
 ### 抓取命令
