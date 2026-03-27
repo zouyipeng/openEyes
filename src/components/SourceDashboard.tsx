@@ -66,15 +66,26 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
   }, [selectedDate])
 
   const loadInitialData = async () => {
-    const index = await dayDataApi.getSourceDatesIndex()
-    const key = sourceNameToFileName(sourceName)
-    const dates = index[key]?.dates || []
-    setAvailableDates(dates)
-    
-    if (initialDate && dates.includes(initialDate)) {
-      setSelectedDate(initialDate)
-    } else if (dates.length > 0) {
-      setSelectedDate(dates[0])
+    try {
+      const index = await dayDataApi.getSourceDatesIndex()
+      const key = sourceNameToFileName(sourceName)
+      const dates = index[key]?.dates || []
+      setAvailableDates(dates)
+
+      if (initialDate && dates.includes(initialDate)) {
+        setSelectedDate(initialDate)
+      } else if (dates.length > 0) {
+        setSelectedDate(dates[0])
+      } else {
+        // No available data for this source: stop spinner and show empty state.
+        setSourceData(null)
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('加载初始数据失败:', error)
+      setAvailableDates([])
+      setSourceData(null)
+      setLoading(false)
     }
   }
 
