@@ -2,62 +2,23 @@
 
 import { memo } from 'react'
 import { lkmlAnchorId } from '@/lib/lkmlAnchor'
+import type { Article } from '@/lib/api'
 
-interface LKMLMessage {
-  id: string
-  url: string
-  title: string
-  author: string
-  date: string
-  content: string
-  isReply: boolean
-}
-
-interface LKMLPatch {
-  id: string
-  title: string
-  url: string
-  author: string
-  date: string
-  content: string
-  subsystem: string
-  type: string
-  highlight: boolean
-  messages: LKMLMessage[]
-  replyCount: number
-}
-
-interface GitCommit {
-  hash: string
-  shortHash: string
-  title: string
-  author: string
-  authorEmail: string
-  date: string
-  content: string
-  files: string[]
-  additions: number
-  deletions: number
-  subsystem: string
-  type: string
-  url: string
-}
-
-interface Article {
-  id: string
-  sourceName: string
-  title: string
-  content?: string
-  url?: string
-  author?: string
-  fetchedAt: string
-  patchData?: LKMLPatch
-  gitCommitData?: GitCommit
+interface ArticleDetailData {
+  patchData?: {
+    changedFiles?: string[]
+  }
+  gitCommitData?: {
+    files?: string[]
+  }
 }
 
 interface LKMLPatchCardProps {
   article: Article
   isJumpHighlighted?: boolean
+  detail?: ArticleDetailData
+  detailLoading?: boolean
+  onLoadDetail?: () => void
 }
 
 const typeColor: Record<string, string> = {
@@ -86,10 +47,18 @@ function formatDate(dateStr: string): string {
   }
 }
 
-function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCardProps) {
+function LKMLPatchCardInner({
+  article,
+  isJumpHighlighted = false,
+  detail,
+  detailLoading = false,
+  onLoadDetail,
+}: LKMLPatchCardProps) {
   const patch = article.patchData
   const gitCommit = article.gitCommitData
   const anchorId = lkmlAnchorId(article.id)
+  const detailGitFiles = Array.isArray(detail?.gitCommitData?.files) ? detail.gitCommitData.files : undefined
+  const detailChangedFiles = Array.isArray(detail?.patchData?.changedFiles) ? detail.patchData.changedFiles : undefined
 
   if (gitCommit) {
     return (
@@ -131,6 +100,22 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
             <span className="text-emerald-600">+{gitCommit.additions}</span>
             <span className="text-rose-600">-{gitCommit.deletions}</span>
           </div>
+        </div>
+        <div className="mt-1.5 pl-6 sm:pl-0">
+          <button
+            type="button"
+            onClick={onLoadDetail}
+            disabled={detailLoading || !onLoadDetail}
+            className="text-[11px] text-sky-600 hover:text-sky-700 disabled:text-slate-400"
+          >
+            {detail ? '已加载详情' : detailLoading ? '详情加载中...' : '加载详情'}
+          </button>
+          {detailGitFiles && detailGitFiles.length > 0 && (
+            <p className="text-[11px] text-slate-500 mt-1 truncate">
+              文件: {detailGitFiles.slice(0, 3).join(', ')}
+              {detailGitFiles.length > 3 ? ' ...' : ''}
+            </p>
+          )}
         </div>
       </div>
     )
@@ -210,6 +195,22 @@ function LKMLPatchCardInner({ article, isJumpHighlighted = false }: LKMLPatchCar
           <span className="text-slate-500 truncate max-w-[80px] sm:max-w-[140px]">{patch.author}</span>
           {patch.date && <span className="hidden sm:inline">{formatDate(patch.date)}</span>}
         </div>
+      </div>
+      <div className="mt-1.5 pl-6 sm:pl-0">
+        <button
+          type="button"
+          onClick={onLoadDetail}
+          disabled={detailLoading || !onLoadDetail}
+          className="text-[11px] text-sky-600 hover:text-sky-700 disabled:text-slate-400"
+        >
+          {detail ? '已加载详情' : detailLoading ? '详情加载中...' : '加载详情'}
+        </button>
+        {detailChangedFiles && detailChangedFiles.length > 0 && (
+          <p className="text-[11px] text-slate-500 mt-1 truncate">
+            文件: {detailChangedFiles.slice(0, 3).join(', ')}
+            {detailChangedFiles.length > 3 ? ' ...' : ''}
+          </p>
+        )}
       </div>
     </div>
   )

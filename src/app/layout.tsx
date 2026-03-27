@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Linux Kernel动态 - openEyes',
+  title: 'Linux Kernel动态 - kernel-tracker.github.io',
   description: '每日追踪 Linux Kernel 社区补丁动态与 AI 聚合总结',
   icons: {
     icon: '/favicon.svg',

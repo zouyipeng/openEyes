@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { fetchAll } from '../lib/fetcher'
 import { generateSummary } from '../lib/ai'
-import { loadSourcesConfig, loadSourceData, saveSourceData, getTodayString } from '../lib/storage'
+import { loadSourcesConfig, loadSourceData, loadSourceDatesIndex, saveSourceData, getTodayString } from '../lib/storage'
 
 const printUsage = () => {
   console.log(`
@@ -10,11 +10,13 @@ const printUsage = () => {
 命令:
   all       全量抓取所有信息源数据
   summary   为指定信息源重新生成摘要
+  compact   批量压缩历史数据为单文件精简结构
 
 示例:
   npm run fetch all
   npm run fetch summary --source "Mailing List"
   npm run fetch summary --source "Mainline" --date 2026-03-25
+  npm run fetch compact
 `)
 }
 
@@ -55,8 +57,8 @@ const runSummary = async (options: Record<string, string>) => {
     process.exit(1)
   }
   
-  if (data.articles.length === 0) {
-    console.error('错误: 数据文件中没有文章')
+  if (!data.articles || data.articles.length === 0) {
+    console.error('错误: 当前数据为精简结构，不包含文章明细，无法重算摘要。请先执行 fetch all 重新抓取。')
     process.exit(1)
   }
   
@@ -75,6 +77,36 @@ const runSummary = async (options: Record<string, string>) => {
   console.log(`[Summary] 摘要生成完成！`)
 }
 
+const sourceNameToFileName = (name: string) => name.toLowerCase().replace(/\s+/g, '-')
+
+const runCompact = async () => {
+  console.log('[Compact] 开始批量压缩历史数据（full -> compact-single-file）...')
+  const index = loadSourceDatesIndex()
+  const config = loadSourcesConfig()
+  const sourceNameMap = new Map(config.sources.map(s => [sourceNameToFileName(s.name), s.name]))
+
+  let converted = 0
+  let skipped = 0
+
+  for (const [sourceKey, value] of Object.entries(index)) {
+    const sourceName = sourceNameMap.get(sourceKey) || sourceKey
+    const dates = value?.dates || []
+    for (const dateStr of dates) {
+      const loaded = loadSourceData(sourceName, dateStr) || loadSourceData(sourceKey, dateStr)
+      if (!loaded) {
+        skipped++
+        console.log(`[Compact] 跳过: ${sourceKey}-${dateStr}.json (未找到)`)
+        continue
+      }
+      saveSourceData(loaded)
+      converted++
+      console.log(`[Compact] 已转换: ${sourceKey}-${dateStr}`)
+    }
+  }
+
+  console.log(`[Compact] 完成，压缩 ${converted} 个日期数据，跳过 ${skipped} 个`)
+}
+
 const main = async () => {
   const { command, options } = parseArgs()
   
@@ -84,6 +116,9 @@ const main = async () => {
       break
     case 'summary':
       await runSummary(options)
+      break
+    case 'compact':
+      await runCompact()
       break
     case 'help':
     case '--help':

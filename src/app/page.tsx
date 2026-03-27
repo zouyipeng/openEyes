@@ -67,7 +67,7 @@ export default function HomePage() {
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
             <PenguinIcon className="h-8 w-8" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">openEyes</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">kernel-tracker.github.io</h1>
           </div>
           <p className="text-slate-600 text-sm sm:text-base">Linux Kernel 社区动态追踪</p>
         </div>

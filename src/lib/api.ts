@@ -16,7 +16,15 @@ export interface SourceDayData {
   sourceType: string
   generatedAt: string
   summary: string
-  articles: Article[]
+  articles?: Article[]
+  stats?: {
+    total: number
+    feature: number
+    bugfix: number
+    other: number
+    additions?: number
+    deletions?: number
+  }
 }
 
 export interface LKMLPatch {
@@ -30,6 +38,7 @@ export interface LKMLPatch {
   type: string
   highlight: boolean
   summary: string
+  changedFiles?: string[]
   messages: LKMLMessage[]
   replyCount: number
 }
@@ -99,12 +108,11 @@ export const dayDataApi = {
 
   getSourceData: async (sourceName: string, dateStr: string): Promise<SourceDayData | null> => {
     try {
-      const fileName = `${sourceNameToFileName(sourceName)}-${dateStr}.json`
-      const response = await fetch(withBasePath(`/${fileName}`))
-      if (response.ok) {
-        return await response.json()
-      }
-      return null
+      const sourceFileName = sourceNameToFileName(sourceName)
+      const fullFileName = `${sourceFileName}-${dateStr}.json`
+      const fullResponse = await fetch(withBasePath(`/${fullFileName}`))
+      if (!fullResponse.ok) return null
+      return await fullResponse.json()
     } catch (error) {
       console.error('读取数据源数据失败:', error)
       return null

@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { dayDataApi, type SourceDayData, type Article } from '@/lib/api'
-import LKMLPatchCard from '@/components/LKMLPatchCard'
 import PenguinIcon from '@/components/PenguinIcon'
 import ReactMarkdown from 'react-markdown'
-import { lkmlAnchorId } from '@/lib/lkmlAnchor'
 
 const TYPE_ORDER: Record<string, number> = { feature: 0, bugfix: 1, other: 2 }
 const TYPE_LABEL: Record<string, string> = {
@@ -45,8 +43,6 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
   const [loading, setLoading] = useState(true)
   const [availableDates, setAvailableDates] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState<string>(initialDate || '')
-  const [isListExpanded, setIsListExpanded] = useState(false)
-  const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null)
 
   const isGit = sourceData?.sourceType === 'git'
 
@@ -59,11 +55,6 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
       loadData(selectedDate)
     }
   }, [selectedDate, sourceName])
-
-  useEffect(() => {
-    setIsListExpanded(false)
-    setActiveAnchorId(null)
-  }, [selectedDate])
 
   const loadInitialData = async () => {
     try {
@@ -107,7 +98,7 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
     return sortArticles(sourceData.articles, isGit)
   }, [sourceData, isGit])
 
-  const typeStats = useMemo(() => {
+  const typeStatsFromArticles = useMemo(() => {
     const stats: Record<string, number> = { feature: 0, bugfix: 0, other: 0 }
     for (const a of articles) {
       const t = a.patchData?.type || a.gitCommitData?.type
@@ -117,9 +108,14 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
     return stats
   }, [articles])
 
-  const count = articles.length
-  const additions = articles.reduce((sum, a) => sum + (a.gitCommitData?.additions || 0), 0)
-  const deletions = articles.reduce((sum, a) => sum + (a.gitCommitData?.deletions || 0), 0)
+  const count = sourceData?.stats?.total ?? articles.length
+  const typeStats = {
+    feature: sourceData?.stats?.feature ?? typeStatsFromArticles.feature,
+    bugfix: sourceData?.stats?.bugfix ?? typeStatsFromArticles.bugfix,
+    other: sourceData?.stats?.other ?? typeStatsFromArticles.other,
+  }
+  const additions = sourceData?.stats?.additions ?? articles.reduce((sum, a) => sum + (a.gitCommitData?.additions || 0), 0)
+  const deletions = sourceData?.stats?.deletions ?? articles.reduce((sum, a) => sum + (a.gitCommitData?.deletions || 0), 0)
   const displayName = sourceData?.sourceName || sourceName
   const summary = sourceData?.summary || ''
   const summaryBlocks = useMemo(() => {
@@ -167,19 +163,6 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
       return `今天 (${month}月${day}日 ${weekdays[date.getDay()]})`
     }
     return `${month}月${day}日 ${weekdays[date.getDay()]}`
-  }
-
-  const handlePatchAnchorJump = (anchorId: string) => {
-    const id = decodeURIComponent(anchorId)
-    setIsListExpanded(true)
-    setActiveAnchorId(id)
-    window.setTimeout(() => setActiveAnchorId(prev => (prev === id ? null : prev)), 2200)
-    window.setTimeout(() => {
-      const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }, 260)
   }
 
   const categorySummaryComponents = {
@@ -289,7 +272,6 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
     a: ({ href, children }: { href?: string; children?: ReactNode }) => {
       if (href?.startsWith('#')) {
         const id = href.slice(1)
-        const isLkmlPatchAnchor = id.startsWith('lkml-')
         const labelText =
           typeof children === 'string'
             ? children
@@ -299,26 +281,18 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
         return (
           <a
             href={href}
-            className={
-              isLkmlPatchAnchor
-                ? 'inline-flex items-center justify-center rounded px-1 text-sky-600 hover:text-sky-700 transition-colors text-sm'
-                : 'text-sky-600 hover:text-sky-700 underline underline-offset-2 text-sm'
-            }
+            className="text-sky-600 hover:text-sky-700 underline underline-offset-2 text-sm"
             title={labelText || '跳转到补丁'}
             aria-label={labelText || '跳转到补丁'}
             onClick={e => {
               e.preventDefault()
-              if (isLkmlPatchAnchor) {
-                handlePatchAnchorJump(id)
-              } else {
-                const el = document.getElementById(id) || document.getElementById(decodeURIComponent(id))
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
+              const el = document.getElementById(id) || document.getElementById(decodeURIComponent(id))
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }
             }}
           >
-            {isLkmlPatchAnchor ? '↧' : children}
+            {children}
           </a>
         )
       }
@@ -417,55 +391,33 @@ export default function SourceDashboard({ sourceName, initialDate }: SourceDashb
           </div>
         )}
 
-        {articles.length === 0 ? (
+        {count === 0 ? (
           <div className="text-center py-12 sm:py-16">
             <div className="text-5xl sm:text-6xl mb-4">📭</div>
             <h3 className="text-lg font-medium text-slate-700 mb-2">暂无内容</h3>
             <p className="text-base text-slate-500">还没有抓取到数据</p>
           </div>
         ) : (
-          <>
-            <button
-              onClick={() => setIsListExpanded(!isListExpanded)}
-              className="w-full mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:border-slate-300 transition-colors"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base">
-                  <span className="text-slate-500">{displayName}</span>
-                  <span className="text-slate-900 font-semibold">{count} 条</span>
-                  <span className="text-slate-300">|</span>
-                  <span className={TYPE_COLOR.feature}>Feature {typeStats.feature}</span>
-                  <span className={TYPE_COLOR.bugfix}>Bugfix {typeStats.bugfix}</span>
-                  <span className={TYPE_COLOR.other}>Other {typeStats.other}</span>
-                </div>
-                <div className="flex items-center gap-3 text-base">
-                  {isGit && (
-                    <span className="text-slate-500">
-                      <span className="text-emerald-600">+{additions.toLocaleString()}</span>
-                      <span className="text-slate-300 mx-1">/</span>
-                      <span className="text-rose-600">-{deletions.toLocaleString()}</span>
-                    </span>
-                  )}
-                  <span className="text-slate-400">
-                    {isListExpanded ? '收起' : '展开'}
-                  </span>
-                </div>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-base">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-slate-500">{displayName}</span>
+                <span className="text-slate-900 font-semibold">{count} 条</span>
+                <span className="text-slate-300">|</span>
+                <span className={TYPE_COLOR.feature}>Feature {typeStats.feature}</span>
+                <span className={TYPE_COLOR.bugfix}>Bugfix {typeStats.bugfix}</span>
+                <span className={TYPE_COLOR.other}>Other {typeStats.other}</span>
               </div>
-            </button>
-
-            <div className={`lkml-collapse-content ${isListExpanded ? 'is-open' : ''}`}>
-              <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm space-y-2">
-                {articles.map(article => (
-                  <div key={article.id} className="lkml-fade-in">
-                    <LKMLPatchCard
-                      article={article}
-                      isJumpHighlighted={activeAnchorId === lkmlAnchorId(article.id)}
-                    />
-                  </div>
-                ))}
-              </div>
+              {isGit && (
+                <span className="text-slate-500">
+                  <span className="text-emerald-600">+{additions.toLocaleString()}</span>
+                  <span className="text-slate-300 mx-1">/</span>
+                  <span className="text-rose-600">-{deletions.toLocaleString()}</span>
+                </span>
+              )}
             </div>
-          </>
+            <p className="mt-2 text-sm text-slate-500">补丁明细列表已隐藏，仅展示摘要与统计信息。</p>
+          </div>
         )}
       </div>
     </div>
