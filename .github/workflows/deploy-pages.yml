@@ -3,7 +3,8 @@ name: Deploy Next.js static site to Pages
 on:
   push:
     branches:
-      - main
+      - master
+      - hulk
   workflow_dispatch:
 
 permissions:
