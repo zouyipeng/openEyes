@@ -71,10 +71,22 @@ function sourceNameToFileName(name: string): string {
   return name.toLowerCase().replace(/\s+/g, '-')
 }
 
+function normalizeBasePath(basePath: string): string {
+  if (!basePath || basePath === '/') return ''
+  return `/${basePath.replace(/^\/+|\/+$/g, '')}`
+}
+
+const BASE_PATH = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH || '')
+
+function withBasePath(resourcePath: string): string {
+  const normalizedPath = resourcePath.startsWith('/') ? resourcePath : `/${resourcePath}`
+  return `${BASE_PATH}${normalizedPath}`
+}
+
 export const dayDataApi = {
   getSourceDatesIndex: async (): Promise<SourceDatesIndex> => {
     try {
-      const response = await fetch('/source-dates.json')
+      const response = await fetch(withBasePath('/source-dates.json'))
       if (response.ok) {
         return await response.json()
       }
@@ -88,7 +100,7 @@ export const dayDataApi = {
   getSourceData: async (sourceName: string, dateStr: string): Promise<SourceDayData | null> => {
     try {
       const fileName = `${sourceNameToFileName(sourceName)}-${dateStr}.json`
-      const response = await fetch(`/${fileName}`)
+      const response = await fetch(withBasePath(`/${fileName}`))
       if (response.ok) {
         return await response.json()
       }

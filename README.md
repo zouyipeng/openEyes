@@ -119,6 +119,16 @@ npx serve out
 npm run all
 ```
 
+### GitHub Pages（Project Pages）部署
+
+本项目已支持通过 GitHub Actions 自动发布到 Project Pages（`https://<user>.github.io/<repo>/`）。
+
+1. 确保仓库 Pages Source 设置为 **GitHub Actions**
+2. 默认分支推送后，工作流会自动构建并部署 `out` 目录
+3. 本仓库工作流将 `NEXT_PUBLIC_BASE_PATH` 设为 `/linux-dev.github.io`，用于适配子路径访问
+
+工作流文件：`.github/workflows/deploy-pages.yml`
+
 ### 抓取命令
 
 ```bash
